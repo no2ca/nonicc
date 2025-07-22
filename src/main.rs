@@ -13,25 +13,21 @@ enum TokenKind{
 #[derive(Clone, Debug)]
 struct Token {
     kind: TokenKind,
-    next: Option<Box<Token>>,
     val: Option<i32>,   // WARNING: この大きさでいいのか？
     str: String,
 }
 
 impl Token {
-    // 現在のトークンに新しいトークンのポインタをつなげる
     // 新しいトークンを返す
-    fn create_next (&mut self, kind: TokenKind, str: String) -> Self {
+    fn create_next (kind: TokenKind, str: String) -> Self {
         let tok = Box::new(
             Token {
                 kind: kind,
-                next: None,
                 str: str,
                 val: None,
             }
         );
-        self.next = Some(tok.clone());
-        *tok // TODO: 直前で作っているので危険ではないがいずれ修正する
+        *tok 
     }
 }
 
@@ -86,21 +82,21 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
     let head = Box::new(
         Token {
             kind: TokenKind::TK_RESERVED,
-            next: None,
             val: None,
-            str: String::from("HEAD"),
+            str: String::from("<HEAD>"),
         }
     );
 
     let mut tok_vec =  vec![head];
-    let mut next;
 
     while let Some(c) = chars.next() {
         if c.is_whitespace() {
             continue;
         } 
-        next = if "+-".contains(c) {
-            Ok(Box::new(tok_vec.last_mut().unwrap().create_next(TokenKind::TK_RESERVED, c.to_string())))
+
+        let next = if "+-".contains(c) {
+            let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string());
+            Ok(Box::new(nxt))
         } else if c.is_ascii_digit() {
             let mut number = c.to_string();
             // peekで次の値の参照が得られる限り
@@ -110,11 +106,10 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
                 } else {
                     break;
                 }
-            } 
-            let tmp = number.clone();
-            let mut nxt = Box::new(tok_vec.last_mut().unwrap().create_next(TokenKind::TK_NUM, tmp)); 
+            }
+            let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone()); 
             nxt.val = Some(number.parse::<i32>().unwrap());
-            Ok(nxt)
+            Ok(Box::new(nxt))
         } else {
             Err("トークナイズできません")
         };
@@ -123,7 +118,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
             Err(e) => eprintln!("Error: {}", e)
         }
     }
-    let eof = tok_vec.last_mut().unwrap().create_next(TokenKind::TK_EOF, String::from("EOF"));
+    let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"));
     tok_vec.push(Box::new(eof));
     tok_vec
 }
