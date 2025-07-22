@@ -123,11 +123,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
         match next {
             Ok(next) => tok_vec.push(next),
             Err(e) => {
-                eprintln!("{}", input);
-                eprint!("{}", " ".repeat(pos));
-                eprint!("^ ");
-                eprintln!("{}", e);
-                exit(1);
+                error_at(input, pos, e);
             }
         }
         pos += 1;
@@ -135,6 +131,14 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
     let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"), pos);
     tok_vec.push(Box::new(eof));
     tok_vec
+}
+
+fn error_at(input: &str, pos: usize, e: anyhow::Error) -> () {
+    eprintln!("{}", input);
+    eprint!("{}", " ".repeat(pos));
+    eprint!("^ ");
+    eprintln!("{}", e);
+    exit(1);
 }
 
 fn main() {
@@ -160,11 +164,7 @@ fn main() {
         Ok(val) => println!("  mov rax, {}", val),
         Err(e) => {
             let pos = tok.tok_vec[tok.idx].pos;
-            eprintln!("{}", input);
-            eprint!("{}", " ".repeat(pos));
-            eprint!("^ ");
-            eprintln!("{}", e);
-            exit(1);
+            error_at(input, pos, e);
         }
     }
 
@@ -174,35 +174,24 @@ fn main() {
                 Ok(val) => println!("  add rax, {}", val),
                 Err(e) => {
                     let pos = tok.tok_vec[tok.idx].pos;
-                    eprintln!("{}", input);
-                    eprint!("{}", " ".repeat(pos));
-                    eprint!("^ ");
-                    eprintln!("{}", e);
-                    exit(1);
+                    error_at(input, pos, e);
                 }
             }
             continue;
         }
+
         match tok.expect(&'-') {
             Ok(()) => (),
             Err(e) => {
                 let pos = tok.tok_vec[tok.idx].pos;
-                eprintln!("{}", input);
-                eprint!("{}", " ".repeat(pos));
-                eprint!("^ ");
-                eprintln!("{}", e);
-                exit(1);
+                error_at(input, pos, e);
             }
         }
         match tok.expect_number() {
-            Ok(val) => println!("  add rax, {}", val),
+            Ok(val) => println!("  sub rax, {}", val),
             Err(e) => {
                 let pos = tok.tok_vec[tok.idx].pos;
-                eprintln!("{}", input);
-                eprint!("{}", " ".repeat(pos));
-                eprint!("^ ");
-                eprintln!("{}", e);
-                exit(1);
+                error_at(input, pos, e);
             }
         }
     }
