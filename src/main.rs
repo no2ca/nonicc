@@ -66,7 +66,7 @@ impl CurrentToken {
     fn expect_number(&mut self) -> i32 {
         let tok = *self.tok_vec[self.idx].clone();
         if tok.kind != TokenKind::TK_NUM {
-            eprintln!("数ではありません");
+            eprintln!("Error: 数ではありません");
             exit(1);    // WARNING: ここで止まるのでいいのか？
         } else {
             let val = tok.val.unwrap();
@@ -125,9 +125,6 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
     }
     let eof = tok_vec.last_mut().unwrap().create_next(TokenKind::TK_EOF, String::from("EOF"));
     tok_vec.push(Box::new(eof));
-    for tok in &tok_vec {
-        println!("{:?}", tok);
-    }
     tok_vec
 }
 
@@ -145,15 +142,10 @@ fn main() {
         idx: 1
     };
 
-    for i in &tok.tok_vec {
-        println!("[DEBUG] tok_vec: {:?}", i);
-    }
-    
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
     println!("  mov rax, {}", &tok.expect_number());
-    // println!("token at 'main': {:?}", &tok.tok_vec);
     
     while !tok.at_eof() {
         if tok.consume(&'+') {
