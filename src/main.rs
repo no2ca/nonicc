@@ -3,13 +3,14 @@
 use std::env;
 use std::process::exit;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Debug)]
 enum TokenKind{
     TK_RESERVED,
     TK_NUM,
     TK_EOF,
 }
 
+#[derive(Clone, Debug)]
 struct Token {
     kind: TokenKind,
     next: Option<Box<Token>>,
@@ -20,7 +21,7 @@ struct Token {
 impl Token {
     // 現在のトークンに新しいトークンのポインタをつなげる
     // 新しいトークンを返す
-    fn create_next (mut self, kind: TokenKind, str: String) -> Self {
+    fn create_next (&mut self, kind: TokenKind, str: String) -> Self {
         let tok = Box::new(
             Token {
                 kind: kind,
@@ -29,8 +30,8 @@ impl Token {
                 val: None,
             }
         );
-        self.next = Some(tok);
-        *self.next.unwrap() // TODO: 直前で作っているので危険ではないがいずれ修正する
+        self.next = Some(tok.clone());
+        *tok // TODO: 直前で作っているので危険ではないがいずれ修正する
     }
 }
 
@@ -75,8 +76,54 @@ impl CurrentToken {
     }
 }
 
-fn tokenize() {
+fn tokenize(input: &str) -> Box<Token> {
+    let mut chars = input.chars().peekable();
+    let mut head = Box::new(
+        Token {
+            kind: TokenKind::TK_RESERVED,
+            next: None,
+            val: None,
+            str: String::new(),
+        }
+    );
 
+    let mut cur =  vec![head];
+    let mut next;
+
+    while let Some(c) = chars.next() {
+        if c.is_whitespace() {
+            continue;
+        } 
+        next = if "+-".contains(c) {
+            Ok(Box::new(cur.last_mut().unwrap().create_next(TokenKind::TK_RESERVED, c.to_string())))
+        } else if c.is_ascii_digit() {
+            let mut number = c.to_string();
+            // peekで次の値の参照が得られる限り
+            while let Some(&next) = chars.peek() {
+                if next.is_ascii_digit() {
+                    number.push(chars.next().unwrap());
+                } else {
+                    break;
+                }
+            } 
+            let tmp = number.clone();
+            let mut nxt = Box::new(cur.last_mut().unwrap().create_next(TokenKind::TK_NUM, tmp)); 
+            nxt.val = Some(number.parse::<i32>().unwrap());
+            Ok(nxt)
+        } else {
+            Err("トークナイズできません")
+        };
+        match next {
+            Ok(next) => cur.push(next),
+            Err(e) => eprintln!("Error: {}", e)
+        }
+    }
+    let eof = cur.last_mut().unwrap().create_next(TokenKind::TK_EOF, String::from("EOF"));
+    cur.push(Box::new(eof));
+    for tok in &cur {
+        println!("{:?}", tok);
+    }
+    cur[0].clone().next.unwrap()
 }
 
 fn main() {
@@ -85,4 +132,6 @@ fn main() {
         eprintln!("Error: 引数の数が間違っています");
         exit(1);
     }
+    
+    let _ = tokenize(&args[1]);
 }
