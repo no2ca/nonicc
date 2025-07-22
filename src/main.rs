@@ -35,38 +35,42 @@ impl Token {
     }
 }
 
+#[derive(Debug)]
 struct CurrentToken {
     token: Token,
 }
 
 impl CurrentToken {
-    fn consume(mut self, op: &char) -> bool {
+    fn consume(&mut self, op: &char) -> bool {
+        println!("token at 'consume': {:?}", self.token);
         if self.token.kind != TokenKind::TK_RESERVED
             || self.token.str.chars().nth(0) != Some(*op) {
                 false
             } else {
-                self.token = *self.token.next.unwrap();
+                self.token = *self.token.next.clone().unwrap();
                 true
             }
     }
 
-    fn expect(mut self, op: &char) {
+    fn expect(&mut self, op: &char) {
         if self.token.kind != TokenKind::TK_RESERVED
             || self.token.str.chars().nth(0) != Some(*op) {
                 eprintln!("'{}'ではありません", op)
             } else {
-                self.token = *self.token.next.unwrap();
+                self.token = *self.token.next.clone().unwrap();
             }
     }
 
-    fn expect_number(mut self) -> i32 {
+    fn expect_number(&mut self) -> i32 {
+        println!("token at 'expect_number': {:?}", self.token);
         if self.token.kind != TokenKind::TK_NUM {
             eprintln!("数ではありません");
             exit(1);    // WARNING: ここで止まるのでいいのか？
         } else {
             // FIXME: unwrapをなるべく使わない！
             let val = self.token.val.unwrap();
-            self.token = *self.token.next.unwrap();
+            self.token = *self.token.next.clone().unwrap();
+            println!("token at 'expect_number': {:?}", self.token);
             val
         }
     }
@@ -76,14 +80,14 @@ impl CurrentToken {
     }
 }
 
-fn tokenize(input: &str) -> Box<Token> {
+fn tokenize(input: &str) -> Vec<Box<Token>> {
     let mut chars = input.chars().peekable();
-    let mut head = Box::new(
+    let head = Box::new(
         Token {
             kind: TokenKind::TK_RESERVED,
             next: None,
             val: None,
-            str: String::new(),
+            str: String::from("HEAD"),
         }
     );
 
@@ -123,7 +127,7 @@ fn tokenize(input: &str) -> Box<Token> {
     for tok in &cur {
         println!("{:?}", tok);
     }
-    cur[0].clone().next.unwrap()
+    cur
 }
 
 fn main() {
@@ -132,6 +136,26 @@ fn main() {
         eprintln!("Error: 引数の数が間違っています");
         exit(1);
     }
+
+    let tok_vec = tokenize(&args[1]);
+    let mut tok = CurrentToken {token: *tok_vec[1].clone()};
+    for i in &tok_vec {
+        println!("[DEBUG] tok_vec: {:?}", i);
+    }
     
-    let _ = tokenize(&args[1]);
+    println!(".intel_syntax noprefix");
+    println!(".globl main");
+    println!("main:");
+    println!("  mov rax, {}", &tok.expect_number());
+    println!("token at 'main': {:?}", &tok.token);
+    
+    while !tok.at_eof() {
+        if tok.consume(&'+') {
+            println!("  add rax, {}", tok.expect_number());
+            continue;
+        }
+        tok.expect(&'-');
+        println!("  sub rax, {}", tok.expect_number());
+    }
+    println!("  ret");
 }
