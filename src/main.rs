@@ -2,6 +2,7 @@
 
 use std::env;
 use std::process::exit;
+use anyhow::anyhow;
 
 #[derive(PartialEq, Clone, Debug)]
 enum TokenKind{
@@ -15,16 +16,18 @@ struct Token {
     kind: TokenKind,
     val: Option<i32>,   // WARNING: この大きさでいいのか？
     str: String,
+    pos: usize,
 }
 
 impl Token {
     // 新しいトークンを返す
-    fn create_next (kind: TokenKind, str: String) -> Self {
+    fn create_next (kind: TokenKind, str: String, pos: usize) -> Self {
         let tok = Box::new(
             Token {
                 kind: kind,
                 str: str,
                 val: None,
+                pos: pos,
             }
         );
         *tok 
@@ -49,25 +52,25 @@ impl CurrentToken {
             }
     }
 
-    fn expect(&mut self, op: &char) {
+    fn expect(&mut self, op: &char) -> anyhow::Result<()> {
         let tok = *self.tok_vec[self.idx].clone();
         if tok.kind != TokenKind::TK_RESERVED
             || tok.str.chars().nth(0) != Some(*op) {
-                eprintln!("'{}'ではありません", op)
+                Err(anyhow!("'{}'ではありません", op))
             } else {
                 self.idx += 1;
+                Ok(())
             }
     }
 
-    fn expect_number(&mut self) -> i32 {
+    fn expect_number(&mut self) -> anyhow::Result<i32> {
         let tok = *self.tok_vec[self.idx].clone();
         if tok.kind != TokenKind::TK_NUM {
-            eprintln!("Error: 数ではありません");
-            exit(1);    // WARNING: ここで止まるのでいいのか？
+            Err(anyhow!("Error: 数ではありません"))
         } else {
             let val = tok.val.unwrap();
             self.idx += 1;
-            val
+            Ok(val)
         }
     }
 
@@ -84,18 +87,21 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
             kind: TokenKind::TK_RESERVED,
             val: None,
             str: String::from("<HEAD>"),
+            pos: 0,
         }
     );
 
     let mut tok_vec =  vec![head];
 
+    let mut pos = 0;
     while let Some(c) = chars.next() {
         if c.is_whitespace() {
+            pos += 1;
             continue;
         } 
 
-        let next = if "+-".contains(c) {
-            let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string());
+        let next: anyhow::Result<Box<Token>> = if "+-".contains(c) {
+            let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
             Ok(Box::new(nxt))
         } else if c.is_ascii_digit() {
             let mut number = c.to_string();
@@ -107,18 +113,26 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
                     break;
                 }
             }
-            let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone()); 
+            let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone(), pos); 
             nxt.val = Some(number.parse::<i32>().unwrap());
             Ok(Box::new(nxt))
         } else {
-            Err("トークナイズできません")
+            Err(anyhow!("トークナイズできません: '{}'", c))
         };
+
         match next {
             Ok(next) => tok_vec.push(next),
-            Err(e) => eprintln!("Error: {}", e)
+            Err(e) => {
+                eprintln!("{}", input);
+                eprint!("{}", " ".repeat(pos));
+                eprint!("^ ");
+                eprintln!("{}", e);
+                exit(1);
+            }
         }
+        pos += 1;
     }
-    let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"));
+    let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"), pos);
     tok_vec.push(Box::new(eof));
     tok_vec
 }
@@ -130,7 +144,8 @@ fn main() {
         exit(1);
     }
 
-    let tok_vec = tokenize(&args[1]);
+    let input = &args[1];
+    let tok_vec = tokenize(input);
     let mut tok = 
     CurrentToken {
         tok_vec: tok_vec,
@@ -140,15 +155,56 @@ fn main() {
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
-    println!("  mov rax, {}", &tok.expect_number());
-    
+
+    match tok.expect_number() {
+        Ok(val) => println!("  mov rax, {}", val),
+        Err(e) => {
+            let pos = tok.tok_vec[tok.idx].pos;
+            eprintln!("{}", input);
+            eprint!("{}", " ".repeat(pos));
+            eprint!("^ ");
+            eprintln!("{}", e);
+            exit(1);
+        }
+    }
+
     while !tok.at_eof() {
         if tok.consume(&'+') {
-            println!("  add rax, {}", tok.expect_number());
+            match tok.expect_number() {
+                Ok(val) => println!("  add rax, {}", val),
+                Err(e) => {
+                    let pos = tok.tok_vec[tok.idx].pos;
+                    eprintln!("{}", input);
+                    eprint!("{}", " ".repeat(pos));
+                    eprint!("^ ");
+                    eprintln!("{}", e);
+                    exit(1);
+                }
+            }
             continue;
         }
-        tok.expect(&'-');
-        println!("  sub rax, {}", tok.expect_number());
+        match tok.expect(&'-') {
+            Ok(()) => (),
+            Err(e) => {
+                let pos = tok.tok_vec[tok.idx].pos;
+                eprintln!("{}", input);
+                eprint!("{}", " ".repeat(pos));
+                eprint!("^ ");
+                eprintln!("{}", e);
+                exit(1);
+            }
+        }
+        match tok.expect_number() {
+            Ok(val) => println!("  add rax, {}", val),
+            Err(e) => {
+                let pos = tok.tok_vec[tok.idx].pos;
+                eprintln!("{}", input);
+                eprint!("{}", " ".repeat(pos));
+                eprint!("^ ");
+                eprintln!("{}", e);
+                exit(1);
+            }
+        }
     }
     println!("  ret");
 }
