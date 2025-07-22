@@ -37,46 +37,47 @@ impl Token {
 
 #[derive(Debug)]
 struct CurrentToken {
-    token: Token,
+    tok_vec: Vec<Box<Token>>,
+    idx: usize,
 }
 
 impl CurrentToken {
     fn consume(&mut self, op: &char) -> bool {
-        println!("token at 'consume': {:?}", self.token);
-        if self.token.kind != TokenKind::TK_RESERVED
-            || self.token.str.chars().nth(0) != Some(*op) {
+        let tok = *self.tok_vec[self.idx].clone();
+        if tok.kind != TokenKind::TK_RESERVED
+            || tok.str.chars().nth(0) != Some(*op) {
                 false
             } else {
-                self.token = *self.token.next.clone().unwrap();
+                self.idx += 1;
                 true
             }
     }
 
     fn expect(&mut self, op: &char) {
-        if self.token.kind != TokenKind::TK_RESERVED
-            || self.token.str.chars().nth(0) != Some(*op) {
+        let tok = *self.tok_vec[self.idx].clone();
+        if tok.kind != TokenKind::TK_RESERVED
+            || tok.str.chars().nth(0) != Some(*op) {
                 eprintln!("'{}'ではありません", op)
             } else {
-                self.token = *self.token.next.clone().unwrap();
+                self.idx += 1;
             }
     }
 
     fn expect_number(&mut self) -> i32 {
-        println!("token at 'expect_number': {:?}", self.token);
-        if self.token.kind != TokenKind::TK_NUM {
+        let tok = *self.tok_vec[self.idx].clone();
+        if tok.kind != TokenKind::TK_NUM {
             eprintln!("数ではありません");
             exit(1);    // WARNING: ここで止まるのでいいのか？
         } else {
-            // FIXME: unwrapをなるべく使わない！
-            let val = self.token.val.unwrap();
-            self.token = *self.token.next.clone().unwrap();
-            println!("token at 'expect_number': {:?}", self.token);
+            let val = tok.val.unwrap();
+            self.idx += 1;
             val
         }
     }
 
     fn at_eof(&self) -> bool {
-        return self.token.kind == TokenKind::TK_EOF;
+        let tok = *self.tok_vec[self.idx].clone();
+        return tok.kind == TokenKind::TK_EOF;
     }
 }
 
@@ -91,7 +92,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
         }
     );
 
-    let mut cur =  vec![head];
+    let mut tok_vec =  vec![head];
     let mut next;
 
     while let Some(c) = chars.next() {
@@ -99,7 +100,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
             continue;
         } 
         next = if "+-".contains(c) {
-            Ok(Box::new(cur.last_mut().unwrap().create_next(TokenKind::TK_RESERVED, c.to_string())))
+            Ok(Box::new(tok_vec.last_mut().unwrap().create_next(TokenKind::TK_RESERVED, c.to_string())))
         } else if c.is_ascii_digit() {
             let mut number = c.to_string();
             // peekで次の値の参照が得られる限り
@@ -111,23 +112,23 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
                 }
             } 
             let tmp = number.clone();
-            let mut nxt = Box::new(cur.last_mut().unwrap().create_next(TokenKind::TK_NUM, tmp)); 
+            let mut nxt = Box::new(tok_vec.last_mut().unwrap().create_next(TokenKind::TK_NUM, tmp)); 
             nxt.val = Some(number.parse::<i32>().unwrap());
             Ok(nxt)
         } else {
             Err("トークナイズできません")
         };
         match next {
-            Ok(next) => cur.push(next),
+            Ok(next) => tok_vec.push(next),
             Err(e) => eprintln!("Error: {}", e)
         }
     }
-    let eof = cur.last_mut().unwrap().create_next(TokenKind::TK_EOF, String::from("EOF"));
-    cur.push(Box::new(eof));
-    for tok in &cur {
+    let eof = tok_vec.last_mut().unwrap().create_next(TokenKind::TK_EOF, String::from("EOF"));
+    tok_vec.push(Box::new(eof));
+    for tok in &tok_vec {
         println!("{:?}", tok);
     }
-    cur
+    tok_vec
 }
 
 fn main() {
@@ -138,8 +139,13 @@ fn main() {
     }
 
     let tok_vec = tokenize(&args[1]);
-    let mut tok = CurrentToken {token: *tok_vec[1].clone()};
-    for i in &tok_vec {
+    let mut tok = 
+    CurrentToken {
+        tok_vec: tok_vec,
+        idx: 1
+    };
+
+    for i in &tok.tok_vec {
         println!("[DEBUG] tok_vec: {:?}", i);
     }
     
@@ -147,7 +153,7 @@ fn main() {
     println!(".globl main");
     println!("main:");
     println!("  mov rax, {}", &tok.expect_number());
-    println!("token at 'main': {:?}", &tok.token);
+    // println!("token at 'main': {:?}", &tok.tok_vec);
     
     while !tok.at_eof() {
         if tok.consume(&'+') {
