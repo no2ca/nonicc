@@ -122,7 +122,7 @@ impl CurrentToken {
         loop {
             if self.consume(&'+') {
                 node = Node::new_node(NodeKind::ND_ADD, node, self.mul());
-            } else if self.consume(&'+') {
+            } else if self.consume(&'-') {
                 node = Node::new_node(NodeKind::ND_SUB, node, self.mul());
             } else {
                 return node;
@@ -242,9 +242,10 @@ fn main() {
         input: input.clone(),
     };
     
-    // let node = tok.expr();
-    // println!("{:?}", node);
+    let node = tok.expr();
+    println!("{:?}", node);
 
+    /*
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
@@ -285,4 +286,5 @@ fn main() {
         }
     }
     println!("  ret");
+    */
 }
