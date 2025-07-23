@@ -21,7 +21,7 @@ struct Token {
 
 impl Token {
     // 新しいトークンを返す
-    fn create_next (kind: TokenKind, str: String, pos: usize) -> Self {
+    fn create_next (kind: TokenKind, str: String, pos: usize) -> Box<Self> {
         let tok = Box::new(
             Token {
                 kind: kind,
@@ -30,7 +30,7 @@ impl Token {
                 pos: pos,
             }
         );
-        *tok 
+        tok 
     }
 }
 
@@ -102,7 +102,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
 
         let next: anyhow::Result<Box<Token>> = if "+-".contains(c) {
             let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
-            Ok(Box::new(nxt))
+            Ok(nxt)
         } else if c.is_ascii_digit() {
             let mut number = c.to_string();
             // peekで次の値の参照が得られる限り
@@ -115,7 +115,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
             }
             let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone(), pos); 
             nxt.val = Some(number.parse::<i32>().unwrap());
-            Ok(Box::new(nxt))
+            Ok(nxt)
         } else {
             Err(anyhow!("トークナイズできません: '{}'", c))
         };
@@ -129,7 +129,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
         pos += 1;
     }
     let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"), pos);
-    tok_vec.push(Box::new(eof));
+    tok_vec.push(eof);
     tok_vec
 }
 
