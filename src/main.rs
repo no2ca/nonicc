@@ -57,22 +57,19 @@ struct Token {
 }
 
 impl Token {
-    fn create_next (kind: TokenKind, str: String, pos: usize) -> Box<Self> {
-        let tok = Box::new(
-            Token {
-                kind: kind,
-                str: str,
-                val: None,
-                pos: pos,
-            }
-        );
-        tok 
+    fn create_next (kind: TokenKind, str: String, pos: usize) -> Token {
+        Token {
+            kind,
+            str,
+            val: None,
+            pos,
+        }
     }
 }
 
 #[derive(Debug)]
 struct CurrentToken {
-    tok_vec: Vec<Box<Token>>,
+    tok_vec: Vec<Token>,
     idx: usize,
     input: String,
 }
@@ -112,8 +109,8 @@ impl CurrentToken {
     }
 
     fn at_eof(&self) -> bool {
-        let tok = *self.tok_vec[self.idx].clone();
-        return tok.kind == TokenKind::TK_EOF;
+        let tok = &self.tok_vec[self.idx];
+        tok.kind == TokenKind::TK_EOF
     }
 
     fn expr(&mut self) -> Box<Node> {
@@ -121,9 +118,27 @@ impl CurrentToken {
 
         loop {
             if self.consume('+') {
-                node = Node::new_node(NodeKind::ND_ADD, node, self.mul());
+                node = {
+                    let kind = NodeKind::ND_ADD;
+                    let rhs = self.mul();
+                    Box::new(Node {
+                        kind,
+                        lhs: Some(node),
+                        rhs: Some(rhs),
+                        val: None,
+                    })
+                };
             } else if self.consume('-') {
-                node = Node::new_node(NodeKind::ND_SUB, node, self.mul());
+                node = {
+                    let kind = NodeKind::ND_SUB;
+                    let rhs = self.mul();
+                    Box::new(Node {
+                        kind,
+                        lhs: Some(node),
+                        rhs: Some(rhs),
+                        val: None,
+                    })
+                };
             } else {
                 return node;
             }
@@ -135,9 +150,27 @@ impl CurrentToken {
 
         loop {
             if self.consume('*') {
-                node = Node::new_node(NodeKind::ND_MUL, node, self.primary());
+                node = {
+                    let kind = NodeKind::ND_MUL;
+                    let rhs = self.primary();
+                    Box::new(Node {
+                        kind,
+                        lhs: Some(node),
+                        rhs: Some(rhs),
+                        val: None,
+                    })
+                };
             } else if self.consume('/') {
-                node = Node::new_node(NodeKind::ND_DIV, node, self.primary());
+                node = {
+                    let kind = NodeKind::ND_DIV;
+                    let rhs = self.primary();
+                    Box::new(Node {
+                        kind,
+                        lhs: Some(node),
+                        rhs: Some(rhs),
+                        val: None,
+                    })
+                };
             } else {
                 return node;
             }
@@ -165,16 +198,14 @@ impl CurrentToken {
     }
 }
 
-fn tokenize(input: &str) -> Vec<Box<Token>> {
+fn tokenize(input: &str) -> Vec<Token> {
     let mut chars = input.chars().peekable();
-    let head = Box::new(
-        Token {
-            kind: TokenKind::TK_RESERVED,
-            val: None,
-            str: String::from("<HEAD>"),
-            pos: 0,
-        }
-    );
+    let head = Token {
+        kind: TokenKind::TK_RESERVED,
+        val: None,
+        str: String::from("<HEAD>"),
+        pos: 0,
+    };
 
     let mut tok_vec =  vec![head];
 
@@ -185,7 +216,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
             continue;
         } 
 
-        let next: anyhow::Result<Box<Token>> = if "+-*/()".contains(c) {
+        let next: anyhow::Result<Token> = if "+-*/()".contains(c) {
             let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
             Ok(nxt)
         } else if c.is_ascii_digit() {
@@ -218,7 +249,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
     tok_vec
 }
 
-fn error_at(input: &str, pos: usize, e: anyhow::Error) -> () {
+fn error_at(input: &str, pos: usize, e: anyhow::Error) {
     eprintln!("{}", input);
     eprint!("{}", " ".repeat(pos));
     eprint!("^ ");
@@ -237,7 +268,7 @@ fn main() {
     let tok_vec = tokenize(input);
     let mut tok = 
     CurrentToken {
-        tok_vec: tok_vec,
+        tok_vec,
         idx: 1,
         input: input.clone(),
     };
@@ -245,6 +276,7 @@ fn main() {
     // let node = tok.expr();
     // println!("{:?}", node);
 
+    /**/
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
