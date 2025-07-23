@@ -79,7 +79,7 @@ struct CurrentToken {
 
 impl CurrentToken {
     fn consume(&mut self, op: char) -> bool {
-        let tok = *self.tok_vec[self.idx].clone();
+        let tok = &self.tok_vec[self.idx];
         if tok.kind != TokenKind::TK_RESERVED
             || tok.str.chars().nth(0) != Some(op) {
                 false
@@ -90,7 +90,7 @@ impl CurrentToken {
     }
 
     fn expect(&mut self, op: char) -> anyhow::Result<()> {
-        let tok = *self.tok_vec[self.idx].clone();
+        let tok = &self.tok_vec[self.idx];
         if tok.kind != TokenKind::TK_RESERVED
             || tok.str.chars().nth(0) != Some(op) {
                 Err(anyhow!("'{}'ではありません", op))
@@ -101,7 +101,7 @@ impl CurrentToken {
     }
 
     fn expect_number(&mut self) -> anyhow::Result<i32> {
-        let tok = *self.tok_vec[self.idx].clone();
+        let tok = &self.tok_vec[self.idx];
         if tok.kind != TokenKind::TK_NUM {
             Err(anyhow!("Error: 数ではありません"))
         } else {
@@ -242,10 +242,9 @@ fn main() {
         input: input.clone(),
     };
     
-    let node = tok.expr();
-    println!("{:?}", node);
+    // let node = tok.expr();
+    // println!("{:?}", node);
 
-    /*
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
@@ -259,7 +258,7 @@ fn main() {
     }
 
     while !tok.at_eof() {
-        if tok.consume(&'+') {
+        if tok.consume('+') {
             match tok.expect_number() {
                 Ok(val) => println!("  add rax, {}", val),
                 Err(e) => {
@@ -270,7 +269,7 @@ fn main() {
             continue;
         }
 
-        match tok.expect(&'-') {
+        match tok.expect('-') {
             Ok(()) => (),
             Err(e) => {
                 let pos = tok.tok_vec[tok.idx].pos;
@@ -286,5 +285,4 @@ fn main() {
         }
     }
     println!("  ret");
-    */
 }
