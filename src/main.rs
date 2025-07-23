@@ -4,6 +4,43 @@ use std::env;
 use std::process::exit;
 use anyhow::anyhow;
 
+#[derive(PartialEq, Debug)]
+enum NodeKind {
+    ND_ADD,
+    ND_SUB,
+    ND_MUL,
+    ND_DIV,
+    ND_NUM,
+}
+
+#[derive(Debug)]
+struct Node {
+    kind: NodeKind,
+    lhs: Option<Box<Node>>,
+    rhs: Option<Box<Node>>,
+    val: Option<i32>,
+}
+
+impl Node {
+    fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
+        Box::new(Node {
+            kind: kind,
+            lhs: Some(lhs),
+            rhs: Some(rhs),
+            val: None,
+        })
+    }
+    
+    fn new_node_num(val: i32) -> Box<Node> {
+        Box::new(Node {
+            kind: NodeKind::ND_NUM,
+            lhs: None,
+            rhs: None,
+            val: Some(val),
+        })
+    }
+}
+
 #[derive(PartialEq, Clone, Debug)]
 enum TokenKind{
     TK_RESERVED,
@@ -20,7 +57,6 @@ struct Token {
 }
 
 impl Token {
-    // 新しいトークンを返す
     fn create_next (kind: TokenKind, str: String, pos: usize) -> Box<Self> {
         let tok = Box::new(
             Token {
@@ -38,6 +74,7 @@ impl Token {
 struct CurrentToken {
     tok_vec: Vec<Box<Token>>,
     idx: usize,
+    input: String,
 }
 
 impl CurrentToken {
@@ -78,6 +115,54 @@ impl CurrentToken {
         let tok = *self.tok_vec[self.idx].clone();
         return tok.kind == TokenKind::TK_EOF;
     }
+
+    fn expr(&mut self) -> Box<Node> {
+        let mut node = self.mul();
+
+        loop {
+            if self.consume(&'+') {
+                node = Node::new_node(NodeKind::ND_ADD, node, self.mul());
+            } else if self.consume(&'+') {
+                node = Node::new_node(NodeKind::ND_SUB, node, self.mul());
+            } else {
+                return node;
+            }
+        }
+    }
+
+    fn mul(&mut self) -> Box<Node> {
+        let mut node = self.primary();
+
+        loop {
+            if self.consume(&'*') {
+                node = Node::new_node(NodeKind::ND_MUL, node, self.primary());
+            } else if self.consume(&'/') {
+                node = Node::new_node(NodeKind::ND_DIV, node, self.primary());
+            } else {
+                return node;
+            }
+        }
+    }
+
+    fn primary(&mut self) -> Box<Node> {
+        if self.consume(&'(') {
+            let node = self.expr();
+            match self.expect(&')') {
+                Ok(()) => (),
+                Err(e) => error_at(&self.input, self.idx, e),
+            };
+            node
+        } else {
+            let mut num = None;
+            match self.expect_number() {
+                Ok(val) => num = Some(val),
+                Err(e) => {
+                    error_at(&self.input, self.idx, e);
+                }
+            };
+            Node::new_node_num(num.unwrap())
+        }
+    }
 }
 
 fn tokenize(input: &str) -> Vec<Box<Token>> {
@@ -100,7 +185,7 @@ fn tokenize(input: &str) -> Vec<Box<Token>> {
             continue;
         } 
 
-        let next: anyhow::Result<Box<Token>> = if "+-".contains(c) {
+        let next: anyhow::Result<Box<Token>> = if "+-*/()".contains(c) {
             let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
             Ok(nxt)
         } else if c.is_ascii_digit() {
@@ -153,8 +238,12 @@ fn main() {
     let mut tok = 
     CurrentToken {
         tok_vec: tok_vec,
-        idx: 1
+        idx: 1,
+        input: input.clone(),
     };
+    
+    // let node = tok.expr();
+    // println!("{:?}", node);
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
