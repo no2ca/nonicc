@@ -78,10 +78,10 @@ struct CurrentToken {
 }
 
 impl CurrentToken {
-    fn consume(&mut self, op: &char) -> bool {
+    fn consume(&mut self, op: char) -> bool {
         let tok = *self.tok_vec[self.idx].clone();
         if tok.kind != TokenKind::TK_RESERVED
-            || tok.str.chars().nth(0) != Some(*op) {
+            || tok.str.chars().nth(0) != Some(op) {
                 false
             } else {
                 self.idx += 1;
@@ -89,10 +89,10 @@ impl CurrentToken {
             }
     }
 
-    fn expect(&mut self, op: &char) -> anyhow::Result<()> {
+    fn expect(&mut self, op: char) -> anyhow::Result<()> {
         let tok = *self.tok_vec[self.idx].clone();
         if tok.kind != TokenKind::TK_RESERVED
-            || tok.str.chars().nth(0) != Some(*op) {
+            || tok.str.chars().nth(0) != Some(op) {
                 Err(anyhow!("'{}'ではありません", op))
             } else {
                 self.idx += 1;
@@ -120,9 +120,9 @@ impl CurrentToken {
         let mut node = self.mul();
 
         loop {
-            if self.consume(&'+') {
+            if self.consume('+') {
                 node = Node::new_node(NodeKind::ND_ADD, node, self.mul());
-            } else if self.consume(&'-') {
+            } else if self.consume('-') {
                 node = Node::new_node(NodeKind::ND_SUB, node, self.mul());
             } else {
                 return node;
@@ -134,9 +134,9 @@ impl CurrentToken {
         let mut node = self.primary();
 
         loop {
-            if self.consume(&'*') {
+            if self.consume('*') {
                 node = Node::new_node(NodeKind::ND_MUL, node, self.primary());
-            } else if self.consume(&'/') {
+            } else if self.consume('/') {
                 node = Node::new_node(NodeKind::ND_DIV, node, self.primary());
             } else {
                 return node;
@@ -145,9 +145,9 @@ impl CurrentToken {
     }
 
     fn primary(&mut self) -> Box<Node> {
-        if self.consume(&'(') {
+        if self.consume('(') {
             let node = self.expr();
-            match self.expect(&')') {
+            match self.expect(')') {
                 Ok(()) => (),
                 Err(e) => error_at(&self.input, self.idx, e),
             };
