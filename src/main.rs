@@ -134,16 +134,27 @@ impl CurrentToken {
     }
 
     fn mul(&mut self) -> Box<Node> {
-        let mut node = self.primary();
+        let mut node = self.unary();
 
         loop {
             if self.consume('*') {
-                node = Node::new(NodeKind::ND_MUL, node, self.primary());
+                node = Node::new(NodeKind::ND_MUL, node, self.unary());
             } else if self.consume('/') {
-                node = Node::new(NodeKind::ND_DIV, node, self.primary());
+                node = Node::new(NodeKind::ND_DIV, node, self.unary());
             } else {
                 return node;
             }
+        }
+    }
+    
+    fn unary(&mut self) -> Box<Node> {
+        if self.consume('+') {
+            self.primary()
+        } else if self.consume('-') {
+            // 一時的に 0-primary() の形で負の数を表す
+            Node::new(NodeKind::ND_SUB, Node::new_node_num(0), self.primary())
+        } else {
+            self.primary()
         }
     }
 
@@ -160,6 +171,7 @@ impl CurrentToken {
             match self.expect_number() {
                 Ok(val) => num = Some(val),
                 Err(e) => {
+                    eprintln!("Error While Parsing");
                     error_at(&self.input, self.idx, e);
                 }
             };
@@ -188,6 +200,7 @@ fn tokenize(input: &str) -> Vec<Token> {
 
         let next: anyhow::Result<Token> = if "+-*/()".contains(c) {
             let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
+            pos += 1;
             Ok(nxt)
         } else if c.is_ascii_digit() {
             let mut number = c.to_string();
@@ -200,6 +213,7 @@ fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone(), pos);
+            pos += number.len();
             nxt.val = Some(number.parse::<i32>().unwrap());
             Ok(nxt)
         } else {
@@ -209,10 +223,10 @@ fn tokenize(input: &str) -> Vec<Token> {
         match next {
             Ok(next) => tok_vec.push(next),
             Err(e) => {
+                eprintln!("Error While Tokenizing");
                 error_at(input, pos, e);
             }
         }
-        pos += 1;
     }
     let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"), pos);
     tok_vec.push(eof);
