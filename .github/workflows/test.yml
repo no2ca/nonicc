@@ -15,5 +15,8 @@ jobs:
 
         steps: 
             - uses: actions/checkout@v4
-            - run: make test
+            - name: Make test.sh executable
+              run: chmod +x test.sh
+            - name: Run make test
+              run: make test
     
