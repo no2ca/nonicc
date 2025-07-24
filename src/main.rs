@@ -19,6 +19,10 @@ enum NodeKind {
     ND_MUL,
     ND_DIV,
     ND_NUM,
+    ND_LE,
+    ND_LT,
+    ND_EQ,
+    ND_NE,
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +36,7 @@ struct Node {
 impl Node {
     fn new(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
         Box::new(Node {
-            kind: kind,
+            kind,
             lhs: Some(lhs),
             rhs: Some(rhs),
             val: None,
@@ -61,16 +65,18 @@ struct Token {
     kind: TokenKind,
     val: Option<i32>, // WARNING: この大きさでいいのか？
     str: String,
-    pos: usize,
+    len: usize,
+    _pos: usize,
 }
 
 impl Token {
-    fn create_next(kind: TokenKind, str: String, pos: usize) -> Token {
+    fn new(kind: TokenKind, str: String, len: usize, pos: usize) -> Token {
         Token {
             kind,
             str,
             val: None,
-            pos,
+            len,
+            _pos: pos,
         }
     }
 }
@@ -83,9 +89,12 @@ struct CurrentToken {
 }
 
 impl CurrentToken {
-    fn consume(&mut self, op: char) -> bool {
+    fn consume(&mut self, op: &str) -> bool {
         let tok = &self.tok_vec[self.idx];
-        if tok.kind != TokenKind::TK_RESERVED || tok.str.chars().nth(0) != Some(op) {
+        let len = op.len();
+        if tok.kind != TokenKind::TK_RESERVED || 
+           tok.str.get(..len) != Some(op) || 
+           tok.len != len {
             false
         } else {
             self.idx += 1;
@@ -93,10 +102,13 @@ impl CurrentToken {
         }
     }
 
-    fn expect(&mut self, op: char) -> anyhow::Result<()> {
+    fn expect(&mut self, op: &str) -> anyhow::Result<()> {
         let tok = &self.tok_vec[self.idx];
-        if tok.kind != TokenKind::TK_RESERVED || tok.str.chars().nth(0) != Some(op) {
-            Err(anyhow!("'{}'ではありません", op))
+        let len = op.len();
+        if tok.kind != TokenKind::TK_RESERVED || 
+           tok.str.get(..len) != Some(op) || 
+           tok.len != len {
+            Err(anyhow!("'{}'を想定していたが、'{}'が入力されました", op, tok.str))
         } else {
             self.idx += 1;
             Ok(())
@@ -108,24 +120,68 @@ impl CurrentToken {
         if tok.kind != TokenKind::TK_NUM {
             Err(anyhow!("Error: 数ではありません"))
         } else {
-            let val = tok.val.unwrap();
-            self.idx += 1;
-            Ok(val)
+            match tok.val {
+                Some(val) => {
+                    self.idx += 1;
+                    Ok(val)
+                },
+                None => Err(anyhow!("Error: 'Token'に数字が格納されていません"))
+            }
         }
     }
 
+    /* 
     fn at_eof(&self) -> bool {
         let tok = &self.tok_vec[self.idx];
         tok.kind == TokenKind::TK_EOF
     }
-
+    */
+    
+    // expr = relational ( "==" relational | "!=" relational )*
     fn expr(&mut self) -> Box<Node> {
+        let mut node = self.relational();
+        
+        loop {
+            if self.consume("==") {
+                node = Node::new(NodeKind::ND_EQ, node, self.relational());
+            } else if self.consume("!=") {
+                node = Node::new(NodeKind::ND_NE, node, self.relational());
+            } else {
+                return node;
+            }
+        }
+    } 
+    
+    // relational = add ( "<" add | "<=" add | ">" add | ">=" add )*
+    fn relational(&mut self) -> Box<Node> {
+        let mut node = self.add();
+        
+        // 長いトークンから見ていく
+        loop {
+            if self.consume("<=") {
+                node = Node::new(NodeKind::ND_LE, node, self.add());
+            } else if self.consume("<") {
+                node = Node::new(NodeKind::ND_LT, node, self.add());
+            } else if self.consume(">=") {
+                // 逆にするだけ
+                node = Node::new(NodeKind::ND_LE, self.add(), node);
+            } else if self.consume(">") {
+                // 逆にするだけ
+                node = Node::new(NodeKind::ND_LT, self.add(), node);
+            } else {
+                return node;
+            }
+        }
+    }
+
+    // add = mul ( "+" mul | "-" mul )*
+    fn add(&mut self) -> Box<Node> {
         let mut node = self.mul();
 
         loop {
-            if self.consume('+') {
+            if self.consume("+") {
                 node = Node::new(NodeKind::ND_ADD, node, self.mul());
-            } else if self.consume('-') {
+            } else if self.consume("-") {
                 node = Node::new(NodeKind::ND_SUB, node, self.mul());
             } else {
                 return node;
@@ -137,9 +193,9 @@ impl CurrentToken {
         let mut node = self.unary();
 
         loop {
-            if self.consume('*') {
+            if self.consume("*") {
                 node = Node::new(NodeKind::ND_MUL, node, self.unary());
-            } else if self.consume('/') {
+            } else if self.consume("/") {
                 node = Node::new(NodeKind::ND_DIV, node, self.unary());
             } else {
                 return node;
@@ -148,9 +204,9 @@ impl CurrentToken {
     }
     
     fn unary(&mut self) -> Box<Node> {
-        if self.consume('+') {
+        if self.consume("+") {
             self.primary()
-        } else if self.consume('-') {
+        } else if self.consume("-") {
             // 一時的に 0-primary() の形で負の数を表す
             Node::new(NodeKind::ND_SUB, Node::new_node_num(0), self.primary())
         } else {
@@ -159,9 +215,9 @@ impl CurrentToken {
     }
 
     fn primary(&mut self) -> Box<Node> {
-        if self.consume('(') {
+        if self.consume("(") {
             let node = self.expr();
-            match self.expect(')') {
+            match self.expect(")") {
                 Ok(()) => (),
                 Err(e) => error_at(&self.input, self.idx, e),
             };
@@ -180,15 +236,18 @@ impl CurrentToken {
     }
 }
 
+fn starts_with_in(input: &str, patterns: &[&str]) -> Option<usize> {
+    for i in 0..patterns.len() {
+        if input.starts_with(patterns[i]) {
+            return Some(i);
+        }
+    };
+    None
+}
+
 fn tokenize(input: &str) -> Vec<Token> {
     let mut chars = input.chars().peekable();
-    let head = Token {
-        kind: TokenKind::TK_RESERVED,
-        val: None,
-        str: String::from("<HEAD>"),
-        pos: 0,
-    };
-
+    let head = Token::new(TokenKind::TK_RESERVED, "<HEAD>".to_string(), 6, 0);
     let mut tok_vec = vec![head];
 
     let mut pos = 0;
@@ -198,11 +257,17 @@ fn tokenize(input: &str) -> Vec<Token> {
             continue;
         }
 
-        let next: anyhow::Result<Token> = if "+-*/()".contains(c) {
-            let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
-            pos += 1;
-            Ok(nxt)
+        eprintln!("pos: {:?}", pos);
+        let patterns = ["+", "-", "*", "/", "(", ")", "<=", "<", ">=", ">", "==", "!="];
+        let next: anyhow::Result<Token> = 
+        if let Some(i) = starts_with_in(input.get(pos..).unwrap(), &patterns) {
+                eprintln!("as reserved {}", patterns[i]);
+                let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len(), pos);
+                pos += patterns[i].len();
+                Ok(nxt)
         } else if c.is_ascii_digit() {
+            eprintln!("as digit");
+            // 数字を処理する
             let mut number = c.to_string();
             // peekで次の値の参照が得られる限り
             while let Some(&next) = chars.peek() {
@@ -212,7 +277,7 @@ fn tokenize(input: &str) -> Vec<Token> {
                     break;
                 }
             }
-            let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone(), pos);
+            let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), pos);
             pos += number.len();
             nxt.val = Some(number.parse::<i32>().unwrap());
             Ok(nxt)
@@ -228,12 +293,12 @@ fn tokenize(input: &str) -> Vec<Token> {
             }
         }
     }
-    let eof = Token::create_next(TokenKind::TK_EOF, String::from("EOF"), pos);
+    let eof = Token::new(TokenKind::TK_EOF, String::from("EOF"), 1, pos);
     tok_vec.push(eof);
     tok_vec
 }
 
-fn generate(node: &Box<Node>) {
+fn generate(node: &Node) {
     // eprintln!("[DEBUG]: node before parsing number {:?}", node);
     if node.kind == NodeKind::ND_NUM {
         match node.val {
@@ -244,14 +309,14 @@ fn generate(node: &Box<Node>) {
     }
 
     // eprintln!("[DEBUG]: node after parsing number {:?}", node);
-
+    // 数以外は両側に何か持っているはずなので
     match &node.lhs {
-        Some(lhs) => generate(&lhs),
+        Some(lhs) => generate(lhs),
         None => panic!("gen() error: missing node.lhs — received None instead"),
     }
 
     match &node.rhs {
-        Some(rhs) => generate(&rhs),
+        Some(rhs) => generate(rhs),
         None => panic!("gen() error: missing node.rhs — received None instead"),
     }
 
@@ -259,6 +324,7 @@ fn generate(node: &Box<Node>) {
     println!("  pop rax"); // 右側の項の値
 
     match node.kind {
+        NodeKind::ND_NUM => (),
         NodeKind::ND_ADD => println!("  add rax, rdi"),
         NodeKind::ND_SUB => println!("  sub rax, rdi"),
         NodeKind::ND_MUL => println!("  imul rax, rdi"),
@@ -266,7 +332,26 @@ fn generate(node: &Box<Node>) {
             println!("  cqo");
             println!("  idiv rdi");
         }
-        NodeKind::ND_NUM => (),
+        NodeKind::ND_LE => {
+            println!("  cmp rax, rdi");
+            println!("  setle al");
+            println!("  movzb rax, al");
+        }
+        NodeKind::ND_LT => {
+            println!("  cmp rax, rdi");
+            println!("  setl al");
+            println!("  movzb rax, al");
+        }
+        NodeKind::ND_EQ => {
+            println!("  cmp rax, rdi");
+            println!("  sete al");
+            println!("  movzb rax, al");
+        }
+        NodeKind::ND_NE => {
+            println!("  cmp rax, rdi");
+            println!("  setne al");
+            println!("  movzb rax, al");
+        }
     }
 
     println!("  push rax");
