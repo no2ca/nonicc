@@ -1,10 +1,18 @@
 #![allow(non_camel_case_types)]
 
+use anyhow::anyhow;
 use std::env;
 use std::process::exit;
-use anyhow::anyhow;
 
-#[derive(PartialEq, Debug)]
+fn error_at(input: &str, pos: usize, e: anyhow::Error) {
+    eprintln!("{}", input);
+    eprint!("{}", " ".repeat(pos));
+    eprint!("^ ");
+    eprintln!("{}", e);
+    exit(1);
+}
+
+#[derive(PartialEq, Debug, Clone)]
 enum NodeKind {
     ND_ADD,
     ND_SUB,
@@ -13,7 +21,7 @@ enum NodeKind {
     ND_NUM,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Node {
     kind: NodeKind,
     lhs: Option<Box<Node>>,
@@ -22,7 +30,7 @@ struct Node {
 }
 
 impl Node {
-    fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
+    fn new(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
         Box::new(Node {
             kind: kind,
             lhs: Some(lhs),
@@ -30,7 +38,7 @@ impl Node {
             val: None,
         })
     }
-    
+
     fn new_node_num(val: i32) -> Box<Node> {
         Box::new(Node {
             kind: NodeKind::ND_NUM,
@@ -42,7 +50,7 @@ impl Node {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-enum TokenKind{
+enum TokenKind {
     TK_RESERVED,
     TK_NUM,
     TK_EOF,
@@ -51,13 +59,13 @@ enum TokenKind{
 #[derive(Clone, Debug)]
 struct Token {
     kind: TokenKind,
-    val: Option<i32>,   // WARNING: この大きさでいいのか？
+    val: Option<i32>, // WARNING: この大きさでいいのか？
     str: String,
     pos: usize,
 }
 
 impl Token {
-    fn create_next (kind: TokenKind, str: String, pos: usize) -> Token {
+    fn create_next(kind: TokenKind, str: String, pos: usize) -> Token {
         Token {
             kind,
             str,
@@ -77,24 +85,22 @@ struct CurrentToken {
 impl CurrentToken {
     fn consume(&mut self, op: char) -> bool {
         let tok = &self.tok_vec[self.idx];
-        if tok.kind != TokenKind::TK_RESERVED
-            || tok.str.chars().nth(0) != Some(op) {
-                false
-            } else {
-                self.idx += 1;
-                true
-            }
+        if tok.kind != TokenKind::TK_RESERVED || tok.str.chars().nth(0) != Some(op) {
+            false
+        } else {
+            self.idx += 1;
+            true
+        }
     }
 
     fn expect(&mut self, op: char) -> anyhow::Result<()> {
         let tok = &self.tok_vec[self.idx];
-        if tok.kind != TokenKind::TK_RESERVED
-            || tok.str.chars().nth(0) != Some(op) {
-                Err(anyhow!("'{}'ではありません", op))
-            } else {
-                self.idx += 1;
-                Ok(())
-            }
+        if tok.kind != TokenKind::TK_RESERVED || tok.str.chars().nth(0) != Some(op) {
+            Err(anyhow!("'{}'ではありません", op))
+        } else {
+            self.idx += 1;
+            Ok(())
+        }
     }
 
     fn expect_number(&mut self) -> anyhow::Result<i32> {
@@ -118,27 +124,9 @@ impl CurrentToken {
 
         loop {
             if self.consume('+') {
-                node = {
-                    let kind = NodeKind::ND_ADD;
-                    let rhs = self.mul();
-                    Box::new(Node {
-                        kind,
-                        lhs: Some(node),
-                        rhs: Some(rhs),
-                        val: None,
-                    })
-                };
+                node = Node::new(NodeKind::ND_ADD, node, self.mul());
             } else if self.consume('-') {
-                node = {
-                    let kind = NodeKind::ND_SUB;
-                    let rhs = self.mul();
-                    Box::new(Node {
-                        kind,
-                        lhs: Some(node),
-                        rhs: Some(rhs),
-                        val: None,
-                    })
-                };
+                node = Node::new(NodeKind::ND_SUB, node, self.mul());
             } else {
                 return node;
             }
@@ -150,27 +138,9 @@ impl CurrentToken {
 
         loop {
             if self.consume('*') {
-                node = {
-                    let kind = NodeKind::ND_MUL;
-                    let rhs = self.primary();
-                    Box::new(Node {
-                        kind,
-                        lhs: Some(node),
-                        rhs: Some(rhs),
-                        val: None,
-                    })
-                };
+                node = Node::new(NodeKind::ND_MUL, node, self.primary());
             } else if self.consume('/') {
-                node = {
-                    let kind = NodeKind::ND_DIV;
-                    let rhs = self.primary();
-                    Box::new(Node {
-                        kind,
-                        lhs: Some(node),
-                        rhs: Some(rhs),
-                        val: None,
-                    })
-                };
+                node = Node::new(NodeKind::ND_DIV, node, self.primary());
             } else {
                 return node;
             }
@@ -207,14 +177,14 @@ fn tokenize(input: &str) -> Vec<Token> {
         pos: 0,
     };
 
-    let mut tok_vec =  vec![head];
+    let mut tok_vec = vec![head];
 
     let mut pos = 0;
     while let Some(c) = chars.next() {
         if c.is_whitespace() {
             pos += 1;
             continue;
-        } 
+        }
 
         let next: anyhow::Result<Token> = if "+-*/()".contains(c) {
             let nxt = Token::create_next(TokenKind::TK_RESERVED, c.to_string(), pos);
@@ -229,7 +199,7 @@ fn tokenize(input: &str) -> Vec<Token> {
                     break;
                 }
             }
-            let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone(), pos); 
+            let mut nxt = Token::create_next(TokenKind::TK_NUM, number.clone(), pos);
             nxt.val = Some(number.parse::<i32>().unwrap());
             Ok(nxt)
         } else {
@@ -249,12 +219,43 @@ fn tokenize(input: &str) -> Vec<Token> {
     tok_vec
 }
 
-fn error_at(input: &str, pos: usize, e: anyhow::Error) {
-    eprintln!("{}", input);
-    eprint!("{}", " ".repeat(pos));
-    eprint!("^ ");
-    eprintln!("{}", e);
-    exit(1);
+fn generate(node: &Box<Node>) {
+    // eprintln!("[DEBUG]: node before parsing number {:?}", node);
+    if node.kind == NodeKind::ND_NUM {
+        match node.val {
+            Some(val) => println!("  push {}", &val),
+            None => panic!("gen() error: missing node.val — received None instead"),
+        }
+        return;
+    }
+
+    // eprintln!("[DEBUG]: node after parsing number {:?}", node);
+
+    match &node.lhs {
+        Some(lhs) => generate(&lhs),
+        None => panic!("gen() error: missing node.lhs — received None instead"),
+    }
+
+    match &node.rhs {
+        Some(rhs) => generate(&rhs),
+        None => panic!("gen() error: missing node.rhs — received None instead"),
+    }
+
+    println!("  pop rdi"); // 左側の項の値
+    println!("  pop rax"); // 右側の項の値
+
+    match node.kind {
+        NodeKind::ND_ADD => println!("  add rax, rdi"),
+        NodeKind::ND_SUB => println!("  sub rax, rdi"),
+        NodeKind::ND_MUL => println!("  imul rax, rdi"),
+        NodeKind::ND_DIV => {
+            println!("  cqo");
+            println!("  idiv rdi");
+        }
+        NodeKind::ND_NUM => (),
+    }
+
+    println!("  push rax");
 }
 
 fn main() {
@@ -266,55 +267,21 @@ fn main() {
 
     let input = &args[1];
     let tok_vec = tokenize(input);
-    let mut tok = 
-    CurrentToken {
+    let mut tok = CurrentToken {
         tok_vec,
         idx: 1,
         input: input.clone(),
     };
-    
-    // let node = tok.expr();
-    // println!("{:?}", node);
 
-    /**/
+    let node = tok.expr();
+    // eprintln!("[DEBUG] node: \n{:?}", node);
+
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
 
-    match tok.expect_number() {
-        Ok(val) => println!("  mov rax, {}", val),
-        Err(e) => {
-            let pos = tok.tok_vec[tok.idx].pos;
-            error_at(input, pos, e);
-        }
-    }
+    generate(&node);
 
-    while !tok.at_eof() {
-        if tok.consume('+') {
-            match tok.expect_number() {
-                Ok(val) => println!("  add rax, {}", val),
-                Err(e) => {
-                    let pos = tok.tok_vec[tok.idx].pos;
-                    error_at(input, pos, e);
-                }
-            }
-            continue;
-        }
-
-        match tok.expect('-') {
-            Ok(()) => (),
-            Err(e) => {
-                let pos = tok.tok_vec[tok.idx].pos;
-                error_at(input, pos, e);
-            }
-        }
-        match tok.expect_number() {
-            Ok(val) => println!("  sub rax, {}", val),
-            Err(e) => {
-                let pos = tok.tok_vec[tok.idx].pos;
-                error_at(input, pos, e);
-            }
-        }
-    }
+    println!("  pop rax");
     println!("  ret");
 }
