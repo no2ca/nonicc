@@ -18,6 +18,9 @@ assert 0 0
 assert 6 6
 assert 2 1+1
 assert 42 ' 25 - 2 + 19 '
+assert 21 ' 42 / 2 '
+assert 2 ' 1 + (2 + 3) / 4 '
+assert 6 '(1) / 2 + (2 * 3)'
 
 rm -f tmp*
 
