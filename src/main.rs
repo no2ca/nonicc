@@ -4,13 +4,7 @@ use anyhow::anyhow;
 use std::env;
 use std::process::exit;
 
-fn error_at(input: &str, pos: usize, e: anyhow::Error) {
-    eprintln!("{}", input);
-    eprint!("{}", " ".repeat(pos));
-    eprint!("^ ");
-    eprintln!("{}", e);
-    exit(1);
-}
+use rs9cc::{ error_at,starts_with_in };
 
 #[derive(PartialEq, Debug, Clone)]
 enum NodeKind {
@@ -66,15 +60,17 @@ struct Token {
     val: Option<i32>, // WARNING: この大きさでいいのか？
     str: String,
     len: usize,
+    pos: usize,
 }
 
 impl Token {
-    fn new(kind: TokenKind, str: String, len: usize) -> Token {
+    fn new(kind: TokenKind, str: String, len: usize, pos: usize) -> Token {
         Token {
             kind,
             str,
             val: None,
             len,
+            pos,
         }
     }
 }
@@ -249,15 +245,6 @@ impl<'a> Parser<'a> {
     
 }
 
-fn starts_with_in(input: &str, patterns: &[&str]) -> Option<usize> {
-    for i in 0..patterns.len() {
-        if input.starts_with(patterns[i]) {
-            return Some(i);
-        }
-    };
-    None
-}
-
 struct Tokenizer<'a> {
     input: &'a str,
     pos: usize,
@@ -299,11 +286,10 @@ impl<'a> Tokenizer<'a> {
 
             let next: anyhow::Result<Token> = 
             if let Some(i) = starts_with_in(self.input.get(self.pos..).unwrap(), &patterns) {
-                    let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len());
                     self.pos += patterns[i].len();
+                    let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len(), self.pos);
                     Ok(nxt)
             } else if c.is_ascii_digit() {
-                eprintln!("as digit");
                 // 数字を処理する
                 let mut number = self.next().unwrap().to_string();
 
@@ -316,7 +302,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
-                let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len());
+                let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), self.pos);
                 nxt.val = Some(number.parse::<i32>().unwrap());
                 Ok(nxt)
 
@@ -332,7 +318,7 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
-        let eof = Token::new(TokenKind::TK_EOF, String::from("<EOF>"), 1);
+        let eof = Token::new(TokenKind::TK_EOF, String::from("<EOF>"), 1, self.pos);
         tok_vec.push(eof);
         tok_vec
     }
@@ -413,11 +399,22 @@ fn main() {
     let input = &args[1];
     let mut input_stream = Tokenizer::new(input);
     let tok_vec = input_stream.tokenize();
+
     eprintln!("[DEBUG] tokens: \n{:?}", &tok_vec);
 
     let mut tok = Parser::new(TokenStream::new(tok_vec, input));
 
     let node = tok.expr();
+
+    eprintln!("[DEBUG] tokens.len: {}", tok.tokens.tok_vec.len());
+    eprintln!("[DEBUG] idx: {}", tok.tokens.idx);
+    
+    // トークンを最後までパース出来たか調べる
+    // EOFトークンがあるので -1 している
+    if tok.tokens.idx != tok.tokens.tok_vec.len() - 1 {
+        error_at(tok.tokens.input, tok.tokens.tok_vec[tok.tokens.idx].pos, anyhow!("余分なトークンがあります"));
+    }
+
     eprintln!("[DEBUG] node: \n{:?}", node.clone());
 
     println!(".intel_syntax noprefix");
