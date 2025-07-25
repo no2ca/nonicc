@@ -3,7 +3,7 @@ assert() {
     expected="$1"
     input="$2"
     cargo run -r "$input" > tmp.s
-    gcc -o tmp tmp.s
+    gcc -z noexecstack -o tmp tmp.s
     ./tmp
     actual="$?"
     if [ "$actual" = "$expected" ]; then 
