@@ -80,15 +80,23 @@ impl Token {
 }
 
 #[derive(Debug)]
-struct CurrentToken {
+struct TokenStream<'a> {
     tok_vec: Vec<Token>,
     idx: usize,
-    input: String,
+    input: &'a str,
 }
 
-impl CurrentToken {
+impl<'a> TokenStream<'a> {
+    fn new(tok_vec: Vec<Token>, input:&str) -> TokenStream {
+        TokenStream {
+            tok_vec,
+            idx: 0,
+            input,
+        }
+    }
+
     fn consume(&mut self, op: &str) -> bool {
-        let tok = &self.tok_vec[self.idx];
+        let tok = self.tok_vec.get(self.idx).unwrap();
         let len = op.len();
         if tok.kind != TokenKind::TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
@@ -101,7 +109,7 @@ impl CurrentToken {
     }
 
     fn expect(&mut self, op: &str) -> anyhow::Result<()> {
-        let tok = &self.tok_vec[self.idx];
+        let tok = self.tok_vec.get(self.idx).unwrap();
         let len = op.len();
         if tok.kind != TokenKind::TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
@@ -114,9 +122,9 @@ impl CurrentToken {
     }
 
     fn expect_number(&mut self) -> anyhow::Result<i32> {
-        let tok = &self.tok_vec[self.idx];
+        let tok = self.tok_vec.get(self.idx).unwrap();
         if tok.kind != TokenKind::TK_NUM {
-            Err(anyhow!("Error: 数ではありません"))
+            Err(anyhow!("Error: ここは数字が必要です"))
         } else {
             match tok.val {
                 Some(val) => {
@@ -127,22 +135,28 @@ impl CurrentToken {
             }
         }
     }
-
-    /* 
-    fn at_eof(&self) -> bool {
-        let tok = &self.tok_vec[self.idx];
-        tok.kind == TokenKind::TK_EOF
-    }
-    */
     
-    // expr = relational ( "==" relational | "!=" relational )*
+}
+
+struct Parser<'a> {
+    tokens: TokenStream<'a>,
+}
+
+impl<'a> Parser<'a> {
+    fn new(tokens: TokenStream) -> Parser {
+        Parser {
+            tokens,
+        }
+    }
+
+    /// `expr = relational ( "==" relational | "!=" relational )*`
     fn expr(&mut self) -> Box<Node> {
         let mut node = self.relational();
         
         loop {
-            if self.consume("==") {
+            if self.tokens.consume("==") {
                 node = Node::new(NodeKind::ND_EQ, node, self.relational());
-            } else if self.consume("!=") {
+            } else if self.tokens.consume("!=") {
                 node = Node::new(NodeKind::ND_NE, node, self.relational());
             } else {
                 return node;
@@ -150,20 +164,20 @@ impl CurrentToken {
         }
     } 
     
-    // relational = add ( "<" add | "<=" add | ">" add | ">=" add )*
+    /// `relational = add ( "<" add | "<=" add | ">" add | ">=" add )*`
     fn relational(&mut self) -> Box<Node> {
         let mut node = self.add();
         
         // 長いトークンから見ていく
         loop {
-            if self.consume("<=") {
+            if self.tokens.consume("<=") {
                 node = Node::new(NodeKind::ND_LE, node, self.add());
-            } else if self.consume("<") {
+            } else if self.tokens.consume("<") {
                 node = Node::new(NodeKind::ND_LT, node, self.add());
-            } else if self.consume(">=") {
+            } else if self.tokens.consume(">=") {
                 // 逆にするだけ
                 node = Node::new(NodeKind::ND_LE, self.add(), node);
-            } else if self.consume(">") {
+            } else if self.tokens.consume(">") {
                 // 逆にするだけ
                 node = Node::new(NodeKind::ND_LT, self.add(), node);
             } else {
@@ -172,14 +186,14 @@ impl CurrentToken {
         }
     }
 
-    // add = mul ( "+" mul | "-" mul )*
+    /// `add = mul ( "+" mul | "-" mul )*`
     fn add(&mut self) -> Box<Node> {
         let mut node = self.mul();
 
         loop {
-            if self.consume("+") {
+            if self.tokens.consume("+") {
                 node = Node::new(NodeKind::ND_ADD, node, self.mul());
-            } else if self.consume("-") {
+            } else if self.tokens.consume("-") {
                 node = Node::new(NodeKind::ND_SUB, node, self.mul());
             } else {
                 return node;
@@ -191,9 +205,9 @@ impl CurrentToken {
         let mut node = self.unary();
 
         loop {
-            if self.consume("*") {
+            if self.tokens.consume("*") {
                 node = Node::new(NodeKind::ND_MUL, node, self.unary());
-            } else if self.consume("/") {
+            } else if self.tokens.consume("/") {
                 node = Node::new(NodeKind::ND_DIV, node, self.unary());
             } else {
                 return node;
@@ -202,9 +216,9 @@ impl CurrentToken {
     }
     
     fn unary(&mut self) -> Box<Node> {
-        if self.consume("+") {
+        if self.tokens.consume("+") {
             self.primary()
-        } else if self.consume("-") {
+        } else if self.tokens.consume("-") {
             // 一時的に 0-primary() の形で負の数を表す
             Node::new(NodeKind::ND_SUB, Node::new_node_num(0), self.primary())
         } else {
@@ -213,25 +227,26 @@ impl CurrentToken {
     }
 
     fn primary(&mut self) -> Box<Node> {
-        if self.consume("(") {
+        if self.tokens.consume("(") {
             let node = self.expr();
-            match self.expect(")") {
+            match self.tokens.expect(")") {
                 Ok(()) => (),
-                Err(e) => error_at(&self.input, self.idx, e),
+                Err(e) => error_at(&self.tokens.input, self.tokens.idx, e),
             };
             node
         } else {
             let mut num = None;
-            match self.expect_number() {
+            match self.tokens.expect_number() {
                 Ok(val) => num = Some(val),
                 Err(e) => {
                     eprintln!("Error While Parsing");
-                    error_at(&self.input, self.idx, e);
+                    error_at(&self.tokens.input, self.tokens.idx, e);
                 }
             };
             Node::new_node_num(num.unwrap())
         }
     }
+    
 }
 
 fn starts_with_in(input: &str, patterns: &[&str]) -> Option<usize> {
@@ -272,21 +287,18 @@ impl<'a> Tokenizer<'a> {
         let mut tok_vec = vec![];
 
         while let Some(c) = self.peek() {
-            // 判定にc、使うときはnext
-            eprintln!("current: {}", &c);
+            // 判定にcを使用
+            // 使うときはnext()
 
             if c.is_whitespace() {
                 self.next();
                 continue;
             }
 
-            eprintln!("pos: {:?}", self.pos);
-
             let patterns = ["+", "-", "*", "/", "(", ")", "<=", "<", ">=", ">", "==", "!="];
 
             let next: anyhow::Result<Token> = 
             if let Some(i) = starts_with_in(self.input.get(self.pos..).unwrap(), &patterns) {
-                    eprintln!("as reserved {}", patterns[i]);
                     let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len());
                     self.pos += patterns[i].len();
                     Ok(nxt)
@@ -320,7 +332,7 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
-        let eof = Token::new(TokenKind::TK_EOF, String::from("EOF"), 1);
+        let eof = Token::new(TokenKind::TK_EOF, String::from("<EOF>"), 1);
         tok_vec.push(eof);
         tok_vec
     }
@@ -401,13 +413,9 @@ fn main() {
     let input = &args[1];
     let mut input_stream = Tokenizer::new(input);
     let tok_vec = input_stream.tokenize();
-    eprintln!("[DEBUG] tokens: {:?}", &tok_vec);
-    let mut tok = CurrentToken {
-        tok_vec,
-        idx: 0,
-        input: input.clone(),
-    };
+    eprintln!("[DEBUG] tokens: \n{:?}", &tok_vec);
 
+    let mut tok = Parser::new(TokenStream::new(tok_vec, input));
 
     let node = tok.expr();
     eprintln!("[DEBUG] node: \n{:?}", node.clone());
