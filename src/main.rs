@@ -66,17 +66,15 @@ struct Token {
     val: Option<i32>, // WARNING: この大きさでいいのか？
     str: String,
     len: usize,
-    _pos: usize,
 }
 
 impl Token {
-    fn new(kind: TokenKind, str: String, len: usize, pos: usize) -> Token {
+    fn new(kind: TokenKind, str: String, len: usize) -> Token {
         Token {
             kind,
             str,
             val: None,
             len,
-            _pos: pos,
         }
     }
 }
@@ -245,57 +243,87 @@ fn starts_with_in(input: &str, patterns: &[&str]) -> Option<usize> {
     None
 }
 
-fn tokenize(input: &str) -> Vec<Token> {
-    let mut chars = input.chars().peekable();
-    let head = Token::new(TokenKind::TK_RESERVED, "<HEAD>".to_string(), 6, 0);
-    let mut tok_vec = vec![head];
+struct Tokenizer<'a> {
+    input: &'a str,
+    pos: usize,
+}
 
-    let mut pos = 0;
-    while let Some(c) = chars.next() {
-        if c.is_whitespace() {
-            pos += 1;
-            continue;
-        }
-
-        eprintln!("pos: {:?}", pos);
-        let patterns = ["+", "-", "*", "/", "(", ")", "<=", "<", ">=", ">", "==", "!="];
-        let next: anyhow::Result<Token> = 
-        if let Some(i) = starts_with_in(input.get(pos..).unwrap(), &patterns) {
-                eprintln!("as reserved {}", patterns[i]);
-                let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len(), pos);
-                pos += patterns[i].len();
-                Ok(nxt)
-        } else if c.is_ascii_digit() {
-            eprintln!("as digit");
-            // 数字を処理する
-            let mut number = c.to_string();
-            // peekで次の値の参照が得られる限り
-            while let Some(&next) = chars.peek() {
-                if next.is_ascii_digit() {
-                    number.push(chars.next().unwrap());
-                } else {
-                    break;
-                }
-            }
-            let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), pos);
-            pos += number.len();
-            nxt.val = Some(number.parse::<i32>().unwrap());
-            Ok(nxt)
-        } else {
-            Err(anyhow!("トークナイズできません: '{}'", c))
-        };
-
-        match next {
-            Ok(next) => tok_vec.push(next),
-            Err(e) => {
-                eprintln!("Error While Tokenizing");
-                error_at(input, pos, e);
-            }
+impl<'a> Tokenizer<'a> {
+    fn new(input: &str) -> Tokenizer {
+        Tokenizer {
+            input,
+            pos: 0,
         }
     }
-    let eof = Token::new(TokenKind::TK_EOF, String::from("EOF"), 1, pos);
-    tok_vec.push(eof);
-    tok_vec
+    
+    /// posに文字があるか確認する
+    fn peek(&self) -> Option<char> {
+        self.input.chars().nth(self.pos)
+    }
+    
+    /// 現在の要素を返してposを進める
+    fn next(&mut self) -> Option<char> {
+        let next = self.input.chars().nth(self.pos);
+        self.pos += 1;
+        next
+    }
+
+    fn tokenize(&mut self) -> Vec<Token> {
+        let mut tok_vec = vec![];
+
+        while let Some(c) = self.peek() {
+            // 判定にc、使うときはnext
+            eprintln!("current: {}", &c);
+
+            if c.is_whitespace() {
+                self.next();
+                continue;
+            }
+
+            eprintln!("pos: {:?}", self.pos);
+
+            let patterns = ["+", "-", "*", "/", "(", ")", "<=", "<", ">=", ">", "==", "!="];
+
+            let next: anyhow::Result<Token> = 
+            if let Some(i) = starts_with_in(self.input.get(self.pos..).unwrap(), &patterns) {
+                    eprintln!("as reserved {}", patterns[i]);
+                    let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len());
+                    self.pos += patterns[i].len();
+                    Ok(nxt)
+            } else if c.is_ascii_digit() {
+                eprintln!("as digit");
+                // 数字を処理する
+                let mut number = self.next().unwrap().to_string();
+
+                // peekで次の値の参照が得られる限り
+                while let Some(n) = self.peek() {
+                    if n.is_ascii_digit() {
+                        number.push(self.next().unwrap());
+                    } else {
+                        break;
+                    }
+                }
+
+                let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len());
+                nxt.val = Some(number.parse::<i32>().unwrap());
+                Ok(nxt)
+
+            } else {
+                Err(anyhow!("トークナイズできません: '{}'", c))
+            };
+
+            match next {
+                Ok(next) => tok_vec.push(next),
+                Err(e) => {
+                    eprintln!("Error While Tokenizing");
+                    error_at(self.input, self.pos, e);
+                }
+            }
+        }
+        let eof = Token::new(TokenKind::TK_EOF, String::from("EOF"), 1);
+        tok_vec.push(eof);
+        tok_vec
+    }
 }
 
 fn generate(node: &Node) {
@@ -309,7 +337,7 @@ fn generate(node: &Node) {
     }
 
     // eprintln!("[DEBUG]: node after parsing number {:?}", node);
-    // 数以外は両側に何か持っているはずなので
+    // 数以外は両側に何か持っているはず
     match &node.lhs {
         Some(lhs) => generate(lhs),
         None => panic!("gen() error: missing node.lhs — received None instead"),
@@ -325,9 +353,15 @@ fn generate(node: &Node) {
 
     match node.kind {
         NodeKind::ND_NUM => (),
-        NodeKind::ND_ADD => println!("  add rax, rdi"),
-        NodeKind::ND_SUB => println!("  sub rax, rdi"),
-        NodeKind::ND_MUL => println!("  imul rax, rdi"),
+        NodeKind::ND_ADD => {
+            println!("  add rax, rdi");
+        }
+        NodeKind::ND_SUB => {
+            println!("  sub rax, rdi");
+        }
+        NodeKind::ND_MUL => {
+            println!("  imul rax, rdi");
+        }
         NodeKind::ND_DIV => {
             println!("  cqo");
             println!("  idiv rdi");
@@ -365,15 +399,18 @@ fn main() {
     }
 
     let input = &args[1];
-    let tok_vec = tokenize(input);
+    let mut input_stream = Tokenizer::new(input);
+    let tok_vec = input_stream.tokenize();
+    eprintln!("[DEBUG] tokens: {:?}", &tok_vec);
     let mut tok = CurrentToken {
         tok_vec,
-        idx: 1,
+        idx: 0,
         input: input.clone(),
     };
 
+
     let node = tok.expr();
-    // eprintln!("[DEBUG] node: \n{:?}", node);
+    eprintln!("[DEBUG] node: \n{:?}", node.clone());
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
