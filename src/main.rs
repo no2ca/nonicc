@@ -6,6 +6,35 @@ use std::process::exit;
 
 use rs9cc::{ error_at,starts_with_in };
 
+#[derive(PartialEq, Clone, Debug)]
+enum TokenKind {
+    TK_RESERVED, // 記号
+    TK_IDENT,    // 変数名の識別子
+    TK_NUM,      // 整数
+    TK_EOF,      // 入力の終わり
+}
+
+#[derive(Clone, Debug)]
+struct Token {
+    kind: TokenKind,
+    val: Option<i32>, // WARNING: この大きさでいいのか？
+    str: String,
+    len: usize,
+    pos: usize,
+}
+
+impl Token {
+    fn new(kind: TokenKind, str: String, len: usize, pos: usize) -> Token {
+        Token {
+            kind,
+            str,
+            val: None,
+            len,
+            pos,
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 enum NodeKind {
     ND_ADD,
@@ -17,6 +46,7 @@ enum NodeKind {
     ND_LT,
     ND_EQ,
     ND_NE,
+    ND_ASSIGN,
 }
 
 #[derive(Debug, Clone)]
@@ -44,34 +74,6 @@ impl Node {
             rhs: None,
             val: Some(val),
         })
-    }
-}
-
-#[derive(PartialEq, Clone, Debug)]
-enum TokenKind {
-    TK_RESERVED,
-    TK_NUM,
-    TK_EOF,
-}
-
-#[derive(Clone, Debug)]
-struct Token {
-    kind: TokenKind,
-    val: Option<i32>, // WARNING: この大きさでいいのか？
-    str: String,
-    len: usize,
-    pos: usize,
-}
-
-impl Token {
-    fn new(kind: TokenKind, str: String, len: usize, pos: usize) -> Token {
-        Token {
-            kind,
-            str,
-            val: None,
-            len,
-            pos,
-        }
     }
 }
 
@@ -120,7 +122,7 @@ impl<'a> TokenStream<'a> {
     fn expect_number(&mut self) -> anyhow::Result<i32> {
         let tok = self.tok_vec.get(self.idx).unwrap();
         if tok.kind != TokenKind::TK_NUM {
-            Err(anyhow!("Error: ここは数字が必要です"))
+            Err(anyhow!("Error: ここは直前に数字が必要です"))
         } else {
             match tok.val {
                 Some(val) => {
@@ -144,9 +146,42 @@ impl<'a> Parser<'a> {
             tokens,
         }
     }
+    
+    /// `expr ";"`
+    fn stmt(&mut self) -> Box<Node> {
+        let node = self.expr();
+        
+        match self.tokens.expect(";") {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!("Error While Parsing");
+                error_at(self.tokens.input, self.tokens.idx, e);
+            }
+        }
+        
+        node
 
-    /// `expr = relational ( "==" relational | "!=" relational )*`
+    }
+    
+    /// `expr = assign`
     fn expr(&mut self) -> Box<Node> {
+        self.assign()
+    }
+    
+    /// `assign = equiality ("=" equiality)?`
+    fn assign(&mut self) -> Box<Node> {
+        let node = self.equiality();
+        
+        if self.tokens.consume("=") {
+            Node::new(NodeKind::ND_ASSIGN, node, self.equiality())
+        } else {
+            return node;
+        }
+        
+    }
+
+    /// `equiality = relational ( "==" relational | "!=" relational )*`
+    fn equiality(&mut self) -> Box<Node> {
         let mut node = self.relational();
         
         loop {
@@ -227,7 +262,10 @@ impl<'a> Parser<'a> {
             let node = self.expr();
             match self.tokens.expect(")") {
                 Ok(()) => (),
-                Err(e) => error_at(&self.tokens.input, self.tokens.idx, e),
+                Err(e) => {
+                    eprintln!("Error While Parsing");
+                    error_at(&self.tokens.input, self.tokens.idx, e);
+                }
             };
             node
         } else {
@@ -237,7 +275,6 @@ impl<'a> Parser<'a> {
                 Err(e) => {
                     eprintln!("Error While Parsing");
                     let idx = self.tokens.idx;
-                    eprintln!("[DEBUG] idx: {}", idx);
                     error_at(&self.tokens.input, self.tokens.tok_vec[idx].pos, e);
                 }
             };
@@ -284,7 +321,7 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
-            let patterns = ["+", "-", "*", "/", "(", ")", "<=", "<", ">=", ">", "==", "!="];
+            let patterns = ["+", "-", "*", "/", "(", ")", ";", "<=", "<", ">=", ">", "==", "!="];
 
             let next: anyhow::Result<Token> = 
             if let Some(i) = starts_with_in(self.input.get(self.pos..).unwrap(), &patterns) {
@@ -307,9 +344,19 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
-                let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), head_pos);
-                nxt.val = Some(number.parse::<i32>().unwrap());
-                Ok(nxt)
+                let mut next = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), head_pos);
+                next.val = Some(number.parse::<i32>().unwrap());
+                Ok(next)
+
+            } else if 'a' <= c && c <= 'z' {
+                let str = self.next().unwrap();
+                let len = 1;
+                Ok(Token::new(
+                    TokenKind::TK_IDENT, 
+                    str.to_string(), 
+                    len, 
+                    self.pos
+                ))
 
             } else {
                 Err(anyhow!("トークナイズできません: '{}'", c))
@@ -389,6 +436,9 @@ fn generate(node: &Node) {
             println!("  setne al");
             println!("  movzb rax, al");
         }
+        _ => {
+            eprintln!("そんなトークン知らねぇ！！\nアセンブリ出力部分が未実装！！");
+        }
     }
 
     println!("  push rax");
@@ -409,7 +459,7 @@ fn main() {
 
     let mut tok = Parser::new(TokenStream::new(tok_vec, input));
 
-    let node = tok.expr();
+    let node = tok.stmt();
 
     eprintln!("[DEBUG] tokens.len: {}", tok.tokens.tok_vec.len());
     eprintln!("[DEBUG] idx: {}", tok.tokens.idx);
