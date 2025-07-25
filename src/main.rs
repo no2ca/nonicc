@@ -236,7 +236,9 @@ impl<'a> Parser<'a> {
                 Ok(val) => num = Some(val),
                 Err(e) => {
                     eprintln!("Error While Parsing");
-                    error_at(&self.tokens.input, self.tokens.idx, e);
+                    let idx = self.tokens.idx;
+                    eprintln!("[DEBUG] idx: {}", idx);
+                    error_at(&self.tokens.input, self.tokens.tok_vec[idx].pos, e);
                 }
             };
             Node::new_node_num(num.unwrap())
@@ -286,12 +288,15 @@ impl<'a> Tokenizer<'a> {
 
             let next: anyhow::Result<Token> = 
             if let Some(i) = starts_with_in(self.input.get(self.pos..).unwrap(), &patterns) {
-                    self.pos += patterns[i].len();
+                    // posは先頭を保存したいので先にTokenを作る
                     let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len(), self.pos);
+                    self.pos += patterns[i].len();
                     Ok(nxt)
             } else if c.is_ascii_digit() {
                 // 数字を処理する
                 let mut number = self.next().unwrap().to_string();
+                
+                let head_pos = self.pos;
 
                 // peekで次の値の参照が得られる限り
                 while let Some(n) = self.peek() {
@@ -302,7 +307,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
-                let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), self.pos);
+                let mut nxt = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), head_pos);
                 nxt.val = Some(number.parse::<i32>().unwrap());
                 Ok(nxt)
 
