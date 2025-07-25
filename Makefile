@@ -7,4 +7,4 @@ run:
 clean:
 	rm -f *.o *~ tmp*
 
-.PHONY: test clean
+.PHONY: test clean run
