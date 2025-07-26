@@ -18,6 +18,7 @@ enum NodeKind {
     ND_EQ,
     ND_NE,
     ND_ASSIGN,
+    ND_LVAR,    // 左辺値
 }
 
 #[derive(Debug, Clone)]
@@ -26,15 +27,17 @@ struct Node {
     lhs: Option<Box<Node>>,
     rhs: Option<Box<Node>>,
     val: Option<i32>,
+    offset: Option<u32>,
 }
 
 impl Node {
-    fn new(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
+    fn new(kind: NodeKind, lhs: Option<Box<Node>>, rhs: Option<Box<Node>>) -> Box<Node> {
         Box::new(Node {
             kind,
-            lhs: Some(lhs),
-            rhs: Some(rhs),
+            lhs: lhs,
+            rhs: rhs,
             val: None,
+            offset: None,
         })
     }
 
@@ -44,6 +47,7 @@ impl Node {
             lhs: None,
             rhs: None,
             val: Some(val),
+            offset: None,
         })
     }
 }
@@ -70,6 +74,18 @@ impl<'a> TokenStream<'a> {
         if tok.kind != TokenKind::TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
            tok.len != len {
+            false
+        } else {
+            self.idx += 1;
+            true
+        }
+    }
+    
+    fn consume_ident(&mut self) -> bool {
+        let tok = self.tok_vec.get(self.idx).unwrap();
+        if tok.kind != TokenKind::TK_IDENT || 
+            // TODO: ちょっと危なげ
+            tok.str.chars().nth(0) != tok.str.chars().nth(0) {
             false
         } else {
             self.idx += 1;
@@ -144,7 +160,7 @@ impl<'a> Parser<'a> {
         let node = self.equiality();
         
         if self.tokens.consume("=") {
-            Node::new(NodeKind::ND_ASSIGN, node, self.equiality())
+            Node::new(NodeKind::ND_ASSIGN, Some(node), Some(self.equiality()))
         } else {
             return node;
         }
@@ -157,9 +173,9 @@ impl<'a> Parser<'a> {
         
         loop {
             if self.tokens.consume("==") {
-                node = Node::new(NodeKind::ND_EQ, node, self.relational());
+                node = Node::new(NodeKind::ND_EQ, Some(node), Some(self.relational()));
             } else if self.tokens.consume("!=") {
-                node = Node::new(NodeKind::ND_NE, node, self.relational());
+                node = Node::new(NodeKind::ND_NE, Some(node), Some(self.relational()));
             } else {
                 return node;
             }
@@ -173,15 +189,15 @@ impl<'a> Parser<'a> {
         // 長いトークンから見ていく
         loop {
             if self.tokens.consume("<=") {
-                node = Node::new(NodeKind::ND_LE, node, self.add());
+                node = Node::new(NodeKind::ND_LE, Some(node), Some(self.add()));
             } else if self.tokens.consume("<") {
-                node = Node::new(NodeKind::ND_LT, node, self.add());
+                node = Node::new(NodeKind::ND_LT, Some(node), Some(self.add()));
             } else if self.tokens.consume(">=") {
                 // 逆にするだけ
-                node = Node::new(NodeKind::ND_LE, self.add(), node);
+                node = Node::new(NodeKind::ND_LE, Some(self.add()), Some(node));
             } else if self.tokens.consume(">") {
                 // 逆にするだけ
-                node = Node::new(NodeKind::ND_LT, self.add(), node);
+                node = Node::new(NodeKind::ND_LT, Some(self.add()), Some(node));
             } else {
                 return node;
             }
@@ -194,9 +210,9 @@ impl<'a> Parser<'a> {
 
         loop {
             if self.tokens.consume("+") {
-                node = Node::new(NodeKind::ND_ADD, node, self.mul());
+                node = Node::new(NodeKind::ND_ADD, Some(node), Some(self.mul()));
             } else if self.tokens.consume("-") {
-                node = Node::new(NodeKind::ND_SUB, node, self.mul());
+                node = Node::new(NodeKind::ND_SUB, Some(node), Some(self.mul()));
             } else {
                 return node;
             }
@@ -208,9 +224,9 @@ impl<'a> Parser<'a> {
 
         loop {
             if self.tokens.consume("*") {
-                node = Node::new(NodeKind::ND_MUL, node, self.unary());
+                node = Node::new(NodeKind::ND_MUL, Some(node), Some(self.unary()));
             } else if self.tokens.consume("/") {
-                node = Node::new(NodeKind::ND_DIV, node, self.unary());
+                node = Node::new(NodeKind::ND_DIV, Some(node), Some(self.unary()));
             } else {
                 return node;
             }
@@ -222,7 +238,7 @@ impl<'a> Parser<'a> {
             self.primary()
         } else if self.tokens.consume("-") {
             // 一時的に 0-primary() の形で負の数を表す
-            Node::new(NodeKind::ND_SUB, Node::new_node_num(0), self.primary())
+            Node::new(NodeKind::ND_SUB, Some(Node::new_node_num(0)), Some(self.primary()))
         } else {
             self.primary()
         }
@@ -239,6 +255,11 @@ impl<'a> Parser<'a> {
                 }
             };
             node
+        } else if self.tokens.consume_ident() {
+            let mut next = Node::new(NodeKind::ND_LVAR, None, None);
+            // TODO: これは読みづらい! 現在のトークンを取得するメソッドを作る
+            next.offset = Some((self.tokens.tok_vec[self.tokens.idx-1].str.chars().nth(0).unwrap() as u32 - 'a' as u32 + 1) * 8);
+            next
         } else {
             let mut num = None;
             match self.tokens.expect_number() {
@@ -256,7 +277,7 @@ impl<'a> Parser<'a> {
 }
 
 fn generate(node: &Node) {
-    // eprintln!("[DEBUG]: node before parsing number {:?}", node);
+
     if node.kind == NodeKind::ND_NUM {
         match node.val {
             Some(val) => println!("  push {}", &val),
@@ -265,7 +286,11 @@ fn generate(node: &Node) {
         return;
     }
 
-    // eprintln!("[DEBUG]: node after parsing number {:?}", node);
+    if node.kind == NodeKind::ND_LVAR {
+        // TODO: 左辺値のアセンブリコードを実装する
+        panic!("LVAR is not implemented!");
+    }
+
     // 数以外は両側に何か持っているはず
     match &node.lhs {
         Some(lhs) => generate(lhs),
