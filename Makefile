@@ -1,5 +1,5 @@
 test:
-	./test.sh
+	./test.sh '$(option)'
 
 run:
 	./run.sh '$(arg)'
