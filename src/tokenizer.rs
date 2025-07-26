@@ -34,16 +34,8 @@ pub mod token {
 pub mod tokenizer {
     use crate::tokenizer::token::{ TokenKind, Token };
     use crate::error_at;
-    use anyhow::anyhow;
+    use anyhow::{ anyhow };
 
-    fn starts_with_in(input: &str, patterns: &[&str]) -> Option<usize> {
-        for i in 0..patterns.len() {
-            if input.starts_with(patterns[i]) {
-                return Some(i);
-            }
-        };
-        None
-    }
     pub struct Tokenizer<'a> {
         input: &'a str,
         pos: usize,
@@ -56,13 +48,22 @@ pub mod tokenizer {
                 pos: 0,
             }
         }
+
+        fn starts_with_in(&self, patterns: &[&str]) -> Option<usize> {
+            for i in 0..patterns.len() {
+                if self.input.get(self.pos..).unwrap().starts_with(patterns[i]) {
+                    return Some(i);
+                }
+            };
+            None
+        }
         
-        /// posに文字があるか確認する
+        /// 次に文字があるか確認する
         fn peek(&self) -> Option<char> {
             self.input.chars().nth(self.pos)
         }
         
-        /// 現在の要素を返してposを進める
+        /// 現在の要素を返して1文字を進める
         fn next(&mut self) -> Option<char> {
             let next = self.input.chars().nth(self.pos);
             self.pos += 1;
@@ -72,25 +73,42 @@ pub mod tokenizer {
         pub fn tokenize(&mut self) -> Vec<Token> {
             let mut tok_vec = vec![];
 
+            // 判定にcを使用
+            // 使うときはnext()
             while let Some(c) = self.peek() {
-                // 判定にcを使用
-                // 使うときはnext()
 
+                // 空白を飛ばす
                 if c.is_whitespace() {
                     self.next();
                     continue;
                 }
 
-                let patterns = ["+", "-", "*", "/", "(", ")", ";", "<=", "<", ">=", ">", "==", "!="];
+                // 2文字の予約語をトークナイズする
+                let patterns_2 = ["<=", ">=", "==", "!="];
+                if let Some(i) = self.starts_with_in(&patterns_2) {
+                    // posは先頭を保存したいので先にTokenを作る
+                    let next = Token::new(TokenKind::TK_RESERVED, patterns_2[i].to_string(), patterns_2[i].len(), self.pos);
+                    self.pos += 2;
 
-                let next: anyhow::Result<Token> = 
-                if let Some(i) = starts_with_in(self.input.get(self.pos..).unwrap(), &patterns) {
-                        // posは先頭を保存したいので先にTokenを作る
-                        let nxt = Token::new(TokenKind::TK_RESERVED, patterns[i].to_string(), patterns[i].len(), self.pos);
-                        self.pos += patterns[i].len();
-                        Ok(nxt)
-                } else if c.is_ascii_digit() {
-                    // 数字を処理する
+                    tok_vec.push(next);
+
+                    continue;
+                }
+
+                // 1文字の予約語をトークナイズする
+                let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">"];
+                if let Some(i) = self.starts_with_in(&patterns_1) {
+                    // posは先頭を保存したいので先にTokenを作る
+                    let next = Token::new(TokenKind::TK_RESERVED, patterns_1[i].to_string(), patterns_1[i].len(), self.pos);
+                    self.pos += 1;
+
+                    tok_vec.push(next);
+
+                    continue;
+                }
+
+                // 数字をトークナイズする
+                if c.is_ascii_digit() {
                     let mut number = self.next().unwrap().to_string();
                     
                     let head_pos = self.pos;
@@ -105,34 +123,37 @@ pub mod tokenizer {
                     }
 
                     let mut next = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), head_pos);
+                    // 数字を設定する
                     next.val = Some(number.parse::<i32>().unwrap());
-                    Ok(next)
 
-                } else if 'a' <= c && c <= 'z' {
+                    tok_vec.push(next);
+                    
+                    continue;
+                }
+
+                // 変数をトークナイズする
+                if 'a' <= c && c <= 'z' {
                     let str = self.next().unwrap();
                     let len = 1;
-                    Ok(Token::new(
-                        TokenKind::TK_IDENT, 
-                        str.to_string(), 
-                        len, 
-                        self.pos
-                    ))
-
-                } else {
-                    Err(anyhow!("トークナイズできません: '{}'", c))
+                    let next = Token::new(TokenKind::TK_IDENT, str.to_string(), len, self.pos);
+                    
+                    tok_vec.push(next);
+                    
+                    continue;
+                } 
+                
+                else {
+                    eprintln!("Error While Tokenizing");
+                    let e = anyhow!("トークナイズできません");
+                    error_at(self.input, self.pos, e);
                 };
-
-                match next {
-                    Ok(next) => tok_vec.push(next),
-                    Err(e) => {
-                        eprintln!("Error While Tokenizing");
-                        error_at(self.input, self.pos, e);
-                    }
-                }
             }
+
             let eof = Token::new(TokenKind::TK_EOF, String::from("<EOF>"), 1, self.pos);
             tok_vec.push(eof);
+
             tok_vec
+
         }
     }
 }
