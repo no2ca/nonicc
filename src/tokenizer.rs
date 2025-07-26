@@ -49,6 +49,7 @@ pub mod tokenizer {
             }
         }
 
+        /// 文字列のリストを渡して一致したらそのインデックスを返す
         fn starts_with_in(&self, patterns: &[&str]) -> Option<usize> {
             for i in 0..patterns.len() {
                 if self.input.get(self.pos..).unwrap().starts_with(patterns[i]) {
@@ -96,7 +97,7 @@ pub mod tokenizer {
                 }
 
                 // 1文字の予約語をトークナイズする
-                let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">"];
+                let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "="];
                 if let Some(i) = self.starts_with_in(&patterns_1) {
                     // posは先頭を保存したいので先にTokenを作る
                     let next = Token::new(TokenKind::TK_RESERVED, patterns_1[i].to_string(), patterns_1[i].len(), self.pos);

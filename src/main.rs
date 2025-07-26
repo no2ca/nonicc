@@ -81,15 +81,18 @@ impl<'a> TokenStream<'a> {
         }
     }
     
-    fn consume_ident(&mut self) -> bool {
+    /// 変数名ならその変数名を返す
+    fn consume_ident(&mut self) -> Option<char> {
         let tok = self.tok_vec.get(self.idx).unwrap();
+        let ident = tok.str.chars().nth(0);
         if tok.kind != TokenKind::TK_IDENT || 
-            // TODO: ちょっと危なげ
-            tok.str.chars().nth(0) != tok.str.chars().nth(0) {
-            false
+            tok.str.chars().nth(0) !=  ident ||
+            ident == None {
+            // TODO: ↑ちょっと危なげ、、1文字限定。
+            None
         } else {
             self.idx += 1;
-            true
+            ident
         }
     }
 
@@ -99,7 +102,11 @@ impl<'a> TokenStream<'a> {
         if tok.kind != TokenKind::TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
            tok.len != len {
-            Err(anyhow!("'{}'を想定していたが、'{}'が入力されました", op, tok.str))
+            if op == ";" {
+                Err(anyhow!("';'が必要です"))
+            } else {
+                Err(anyhow!("'{}'を想定していたが、'{}'が入力されました", op, tok.str))
+            }
         } else {
             self.idx += 1;
             Ok(())
@@ -119,6 +126,12 @@ impl<'a> TokenStream<'a> {
                 None => Err(anyhow!("Error: 'Token'に数字が格納されていません"))
             }
         }
+    }
+    
+    /// 現在のトークンを取得する
+    fn get_current_token(&self) -> Token {
+        let current_idx = self.idx;
+        self.tok_vec[current_idx].clone()
     }
     
 }
@@ -142,7 +155,7 @@ impl<'a> Parser<'a> {
             Ok(_) => (),
             Err(e) => {
                 eprintln!("Error While Parsing");
-                error_at(self.tokens.input, self.tokens.idx, e);
+                error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
             }
         }
         
@@ -251,14 +264,15 @@ impl<'a> Parser<'a> {
                 Ok(()) => (),
                 Err(e) => {
                     eprintln!("Error While Parsing");
-                    error_at(&self.tokens.input, self.tokens.idx, e);
+                    error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                 }
             };
             node
-        } else if self.tokens.consume_ident() {
+        } else if let Some(ident) = self.tokens.consume_ident() {
             let mut next = Node::new(NodeKind::ND_LVAR, None, None);
-            // TODO: これは読みづらい! 現在のトークンを取得するメソッドを作る
-            next.offset = Some((self.tokens.tok_vec[self.tokens.idx-1].str.chars().nth(0).unwrap() as u32 - 'a' as u32 + 1) * 8);
+
+            // ここは一時的に文字コードにおけるオフセットを設定
+            next.offset = Some((ident as u32 - 'a' as u32 + 1) * 8);
             next
         } else {
             let mut num = None;
@@ -276,19 +290,57 @@ impl<'a> Parser<'a> {
     
 }
 
+fn generate_lval(node: &Node) {
+    if node.kind != NodeKind::ND_LVAR {
+        eprintln!("代入の左辺値が変数ではありません");
+        exit(1);
+    }
+    
+    println!("  mov rax, rbp");
+    println!("  sub rax, {}", node.offset.expect("node.offsetがNoneです"));
+    println!("  push rax");
+    return;
+}
+
 fn generate(node: &Node) {
 
-    if node.kind == NodeKind::ND_NUM {
-        match node.val {
-            Some(val) => println!("  push {}", &val),
-            None => panic!("gen() error: missing node.val — received None instead"),
+    match node.kind { 
+        NodeKind::ND_NUM => {
+            match node.val {
+                Some(val) => println!("  push {}", &val),
+                None => panic!("gen() error: missing node.val — received None instead"),
+            }
+            return;
         }
-        return;
-    }
 
-    if node.kind == NodeKind::ND_LVAR {
-        // TODO: 左辺値のアセンブリコードを実装する
-        panic!("LVAR is not implemented!");
+        NodeKind::ND_LVAR => {
+            generate_lval(node);
+            println!("  pop rax");
+            println!("  mov rax, [rax]");
+            println!("  push rax");
+            return;
+        }
+        
+        NodeKind::ND_ASSIGN => {
+            match &node.lhs {
+                Some(lhs) => generate_lval(lhs),
+                None => panic!("gen() error: missing node.lhs — received None instead"),
+            }
+
+            match &node.rhs {
+                Some(rhs) => generate(rhs),
+                None => panic!("gen() error: missing node.rhs — received None instead"),
+            }
+            
+            println!("  pop rdi");
+            println!("  pop rax");
+            println!("  mov [rax], rdi");
+            println!("  push rdi");
+            return;
+        }
+
+        _ => ()
+
     }
 
     // 数以外は両側に何か持っているはず
@@ -363,7 +415,11 @@ fn main() {
 
     let mut tok = Parser::new(TokenStream::new(tok_vec, input));
 
-    let node = tok.stmt();
+    // TODO: 無限ループの可能性がある
+    let mut nodes: Vec<Box<Node>> = vec![];
+    while tok.tokens.idx != tok.tokens.tok_vec.len() - 1  {
+        nodes.push(tok.stmt());
+    }
 
     eprintln!("[DEBUG] tokens.len: {}", tok.tokens.tok_vec.len());
     eprintln!("[DEBUG] idx: {}", tok.tokens.idx);
@@ -374,14 +430,23 @@ fn main() {
         error_at(tok.tokens.input, tok.tokens.tok_vec[tok.tokens.idx].pos, anyhow!("余分なトークンがあります"));
     }
 
-    eprintln!("[DEBUG] node: \n{:?}", node.clone());
+    eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
 
+    // コード生成ここから
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
+    
+    println!("  push rbp");
+    println!("  mov rbp, rsp");
+    println!("  sub rsp, 208");
 
-    generate(&node);
+    for node in nodes {
+        generate(&node);
+    }
 
     println!("  pop rax");
+    println!("  mov rsp, rbp");
+    println!("  pop rbp");
     println!("  ret");
 }
