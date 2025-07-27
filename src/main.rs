@@ -290,6 +290,7 @@ impl<'a> Parser<'a> {
     
 }
 
+/// 代入先のアドレスをスタックに積む
 fn generate_lval(node: &Node) {
     if node.kind != NodeKind::ND_LVAR {
         eprintln!("代入の左辺値が変数ではありません");
@@ -313,6 +314,8 @@ fn generate(node: &Node) {
             return;
         }
 
+        // ここは右辺値として変数を扱う時
+        // つまり変数の評価をするときに呼び出される
         NodeKind::ND_LVAR => {
             generate_lval(node);
             println!("  pop rax");
@@ -427,7 +430,7 @@ fn main() {
     // トークンを最後までパース出来たか調べる
     // EOFトークンがあるので -1 している
     if tok.tokens.idx != tok.tokens.tok_vec.len() - 1 {
-        error_at(tok.tokens.input, tok.tokens.tok_vec[tok.tokens.idx].pos, anyhow!("余分なトークンがあります"));
+        error_at(tok.tokens.input, tok.tokens.get_current_token().pos, anyhow!("余分なトークンがあります"));
     }
 
     eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
@@ -443,9 +446,9 @@ fn main() {
 
     for node in nodes {
         generate(&node);
+        println!("  pop rax");
     }
 
-    println!("  pop rax");
     println!("  mov rsp, rbp");
     println!("  pop rbp");
     println!("  ret");
