@@ -135,9 +135,19 @@ pub mod tokenizer {
 
                 // 変数をトークナイズする
                 if 'a' <= c && c <= 'z' {
-                    let str = self.next().unwrap();
-                    let len = 1;
-                    let next = Token::new(TokenKind::TK_IDENT, str.to_string(), len, self.pos);
+                    let head_pos = self.pos;
+                    let mut ident = self.next().unwrap().to_string();
+                    
+                    while let Some(s) = self.peek() {
+                        if 'a' <= s && s <= 'z' {
+                            ident.push(self.next().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+
+                    let len = ident.len();
+                    let next = Token::new(TokenKind::TK_IDENT, ident, len, head_pos);
                     
                     tok_vec.push(next);
                     
