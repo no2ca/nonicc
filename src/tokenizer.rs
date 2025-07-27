@@ -9,7 +9,7 @@ pub mod token {
         TK_EOF,      // 入力の終わり
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(PartialEq, Clone, Debug)]
     pub struct Token {
         pub kind: TokenKind,
         pub val: Option<i32>, // WARNING: この大きさでいいのか？
@@ -70,7 +70,7 @@ pub mod tokenizer {
             self.pos += 1;
             next
         }
-
+        
         pub fn tokenize(&mut self) -> Vec<Token> {
             let mut tok_vec = vec![];
 
@@ -85,10 +85,11 @@ pub mod tokenizer {
                 }
 
                 // 2文字の予約語をトークナイズする
-                let patterns_2 = ["<=", ">=", "==", "!="];
-                if let Some(i) = self.starts_with_in(&patterns_2) {
+                let patterns_len_2 = ["<=", ">=", "==", "!="];
+                if let Some(i) = self.starts_with_in(&patterns_len_2) {
                     // posは先頭を保存したいので先にTokenを作る
-                    let next = Token::new(TokenKind::TK_RESERVED, patterns_2[i].to_string(), patterns_2[i].len(), self.pos);
+                    let word = patterns_len_2[i].to_string();
+                    let next = Token::new(TokenKind::TK_RESERVED, word, 2, self.pos);
                     self.pos += 2;
 
                     tok_vec.push(next);
@@ -100,7 +101,8 @@ pub mod tokenizer {
                 let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "="];
                 if let Some(i) = self.starts_with_in(&patterns_1) {
                     // posは先頭を保存したいので先にTokenを作る
-                    let next = Token::new(TokenKind::TK_RESERVED, patterns_1[i].to_string(), patterns_1[i].len(), self.pos);
+                    let word = patterns_1[i].to_string();
+                    let next = Token::new(TokenKind::TK_RESERVED, word, 1, self.pos);
                     self.pos += 1;
 
                     tok_vec.push(next);
@@ -110,9 +112,8 @@ pub mod tokenizer {
 
                 // 数字をトークナイズする
                 if c.is_ascii_digit() {
-                    let mut number = self.next().unwrap().to_string();
-                    
                     let head_pos = self.pos;
+                    let mut number = self.next().unwrap().to_string();
 
                     // peekで次の値の参照が得られる限り
                     while let Some(n) = self.peek() {
