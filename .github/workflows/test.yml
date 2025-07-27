@@ -12,11 +12,17 @@ on:
 jobs: 
     make_test:
         runs-on: ubuntu-latest
-
         steps: 
             - uses: actions/checkout@v4
             - name: Make test.sh executable
               run: chmod +x test.sh
             - name: Run make test all
               run: make test option=all
+
+    cargo_test:
+        runs-on: ubuntu-latest
+        steps: 
+            - uses: actions/checkout@v4
+            - name: Run cargo test
+              run: cargo test
     
