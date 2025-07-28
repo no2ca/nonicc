@@ -27,7 +27,7 @@ struct Node {
     lhs: Option<Box<Node>>,
     rhs: Option<Box<Node>>,
     val: Option<i32>,
-    offset: Option<u32>,
+    offset: Option<usize>,
 }
 
 impl Node {
@@ -48,6 +48,16 @@ impl Node {
             rhs: None,
             val: Some(val),
             offset: None,
+        })
+    }
+
+    fn new_node_lvar(offset: usize) -> Box<Node> {
+        Box::new(Node {
+            kind: NodeKind::ND_LVAR,
+            lhs: None,
+            rhs: None,
+            val: None,
+            offset: Some(offset),
         })
     }
 }
@@ -82,17 +92,14 @@ impl<'a> TokenStream<'a> {
     }
     
     /// 変数名ならその変数名を返す
-    fn consume_ident(&mut self) -> Option<char> {
-        let tok = self.tok_vec.get(self.idx).unwrap();
-        let ident = tok.str.chars().nth(0);
-        if tok.kind != TokenKind::TK_IDENT || 
-            tok.str.chars().nth(0) !=  ident ||
-            ident == None {
-            // TODO: ↑ちょっと危なげ、、1文字限定。
+    fn consume_ident(&mut self) -> Option<Token> {
+        // ここで呼び出しているメソッドはクローンを返すため
+        let tok = self.get_current_token();
+        if tok.kind != TokenKind::TK_IDENT {
             None
         } else {
             self.idx += 1;
-            ident
+            Some(tok)
         }
     }
 
@@ -136,15 +143,42 @@ impl<'a> TokenStream<'a> {
     
 }
 
+struct Lvars {
+    lvars_vec: Vec<LVar>,
+}
+
+impl Lvars {
+    /// 現在見ている変数名を検索する
+    fn new() -> Self {
+        // 先頭の識別子は衝突しない名前で
+        let head_lvars = LVar::new("__dummy".to_string(), 12, 0);
+        Lvars { lvars_vec: vec![head_lvars] }
+    }
+
+    fn find_lvar(&self, cur: &Token) -> Option<LVar> {
+        let lvars_vec = &self.lvars_vec;
+        // 先頭を含めなければ良い
+        for i in 1..lvars_vec.len() {
+            let lvar = &lvars_vec[i];
+            if lvar.len == cur.len && lvar.name == cur.str {
+                return Some(lvar.clone());
+            }
+        }
+        None
+    }
+}
+
 struct Parser<'a> {
     tokens: TokenStream<'a>,
+    lvars: Lvars,
 }
 
 impl<'a> Parser<'a> {
     fn new(tokens: TokenStream) -> Parser {
         Parser {
             tokens,
-        }
+            lvars: Lvars::new(),
+}
     }
     
     /// `expr ";"`
@@ -269,19 +303,26 @@ impl<'a> Parser<'a> {
             };
             node
         } else if let Some(ident) = self.tokens.consume_ident() {
-            let mut next = Node::new(NodeKind::ND_LVAR, None, None);
-
-            // ここは一時的に文字コードにおけるオフセットを設定
-            next.offset = Some((ident as u32 - 'a' as u32 + 1) * 8);
-            next
+            // ローカル変数が既にあるか調べる
+            if let Some(lvar) = self.lvars.find_lvar(&ident) {
+                // ある場合はそのオフセットを使う
+                let offset = lvar.offset;
+                Node::new_node_lvar(offset)
+            } else {
+                // ない場合は手前のに8を足して使う
+                // TokenStreamの初期化時に先頭があるため
+                let offset = self.lvars.lvars_vec.last().unwrap().offset + 8;
+                let lvar = LVar::new(ident.str, ident.len, offset);
+                self.lvars.lvars_vec.push(lvar);
+                Node::new_node_lvar(offset)
+            }
         } else {
             let mut num = None;
             match self.tokens.expect_number() {
                 Ok(val) => num = Some(val),
                 Err(e) => {
                     eprintln!("Error While Parsing");
-                    let idx = self.tokens.idx;
-                    error_at(&self.tokens.input, self.tokens.tok_vec[idx].pos, e);
+                    error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                 }
             };
             Node::new_node_num(num.unwrap())
@@ -401,6 +442,23 @@ fn generate(node: &Node) {
     }
 
     println!("  push rax");
+}
+
+#[derive(Debug, Clone)]
+struct LVar {
+    name: String,
+    len: usize,
+    offset: usize,
+}
+
+impl LVar {
+    fn new(name: String, len: usize, offset: usize) -> LVar {
+        LVar {
+            name,
+            len,
+            offset,
+        }
+    }
 }
 
 fn main() {
