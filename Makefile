@@ -1,8 +1,8 @@
 test:
-	./test.sh '$(option)'
+	./scripts/test.sh '$(option)'
 
 run:
-	./run.sh '$(arg)'
+	./scripts/run.sh '$(arg)'
 	
 clean:
 	rm -f *.o *~ tmp*
