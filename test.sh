@@ -37,13 +37,16 @@ if [ "$option" = "all" ]; then
     assert 1 ' 1 <= 1; '
     assert 0 ' 1 > 1; '
     assert 1 ' 1 >= 1; '
-fi
 
-assert 0 ' a = 0; '
-assert 1 ' a = 1; '
-assert 25 ' a = 5; 
+    assert 0 ' a = 0; '
+    assert 1 ' a = 1; '
+    assert 25 ' a = 5; 
 b = (a + 1) * 2 / 3 + 1; 
 c = b * b; c; '
+fi
+
+assert 2 ' foo = 1; bar = 2; foo * bar; '
+assert 4 ' foo = 3; bar = 4; foo = bar; '
 
 rm -f tmp*
 
