@@ -43,10 +43,15 @@ if [ "$option" = "all" ]; then
     assert 25 ' a = 5; 
 b = (a + 1) * 2 / 3 + 1; 
 c = b * b; c; '
+
+    assert 2 ' foo = 1; bar = 2; foo * bar; '
+    assert 4 ' foo = 3; bar = 4; foo = bar; '
 fi
 
-assert 2 ' foo = 1; bar = 2; foo * bar; '
-assert 4 ' foo = 3; bar = 4; foo = bar; '
+assert 1 ' return 1; '
+assert 6 ' return 1 + 2 + 3; '
+assert 6 ' a = 1; return a + 2 + 3; '
+assert 1 ' return 1; return 2; '
 
 rm -f tmp*
 

@@ -76,3 +76,29 @@ fn tokenize_ambiguous_inequal() {
     assert_eq!(tokens, expected);
     
 } 
+
+#[test]
+fn tokenize_return() {
+    let mut tokinizer = Tokenizer::new(" return ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_RETURN, val: None, str: "return".to_string(), len: 6, pos: 1 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 8 }
+    ];
+    
+    assert_eq!(tokens, expected);
+    
+} 
+
+#[test]
+fn tokenize_returnx() {
+    let mut tokinizer = Tokenizer::new(" returnx ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IDENT, val: None, str: "returnx".to_string(), len: 7, pos: 1 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 9 }
+    ];
+    
+    assert_eq!(tokens, expected);
+    
+} 
