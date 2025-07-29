@@ -1,3 +1,5 @@
+use std::usize;
+
 use anyhow::anyhow;
 
 use crate::types::{ TokenKind, Token };
@@ -16,14 +18,23 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    /// 文字列のリストを渡して一致したらそのインデックスを返す
-    fn starts_with_in(&self, patterns: &[&str]) -> Option<usize> {
-        for i in 0..patterns.len() {
-            if self.input.get(self.pos..).unwrap().starts_with(patterns[i]) {
-                return Some(i);
+    /// 文字列のリストを渡して一致したらその要素を返す
+    fn starts_with_in(&self, patterns: &[&'a str]) -> Option<&'a str> {
+        for pat in patterns {
+            if self.input.get(self.pos..).unwrap().starts_with(pat) {
+                return Some(pat);
             }
         };
         None
+    }
+    
+    /// 入力のインデックスはトークンの構成文字か調べる
+    fn is_alnum(&self, idx: usize) -> bool {
+        let maybe_c = self.input.chars().nth(idx);
+        match maybe_c {
+            None => false,
+            Some(c) => c.is_ascii_alphanumeric() || c == '_'
+        }
     }
     
     /// 次に文字があるか確認する
@@ -50,13 +61,23 @@ impl<'a> Tokenizer<'a> {
                 self.next();
                 continue;
             }
+            
+            // return文をトークナイズする
+            // 次の文字も調べる必要がある
+            if self.input.get(self.pos..).unwrap().starts_with("return") && !self.is_alnum(self.pos + 6) {
+                let next = Token::new(TokenKind::TK_RETURN, "return".to_string(), 6, self.pos);
+                self.pos += 6;
+                
+                tok_vec.push(next);
+
+                continue;
+            }
 
             // 2文字の予約語をトークナイズする
             let patterns_len_2 = ["<=", ">=", "==", "!="];
-            if let Some(i) = self.starts_with_in(&patterns_len_2) {
+            if let Some(pat) = self.starts_with_in(&patterns_len_2) {
                 // posは先頭を保存したいので先にTokenを作る
-                let word = patterns_len_2[i].to_string();
-                let next = Token::new(TokenKind::TK_RESERVED, word, 2, self.pos);
+                let next = Token::new(TokenKind::TK_RESERVED, pat.to_string(), 2, self.pos);
                 self.pos += 2;
 
                 tok_vec.push(next);
@@ -66,10 +87,9 @@ impl<'a> Tokenizer<'a> {
 
             // 1文字の予約語をトークナイズする
             let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "="];
-            if let Some(i) = self.starts_with_in(&patterns_1) {
+            if let Some(pat) = self.starts_with_in(&patterns_1) {
                 // posは先頭を保存したいので先にTokenを作る
-                let word = patterns_1[i].to_string();
-                let next = Token::new(TokenKind::TK_RESERVED, word, 1, self.pos);
+                let next = Token::new(TokenKind::TK_RESERVED, pat.to_string(), 1, self.pos);
                 self.pos += 1;
 
                 tok_vec.push(next);
@@ -160,6 +180,16 @@ impl<'a> TokenStream<'a> {
         if tok.kind != TokenKind::TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
            tok.len != len {
+            false
+        } else {
+            self.idx += 1;
+            true
+        }
+    }
+    
+    pub fn consume_keyword(&mut self, kind: TokenKind) -> bool {
+        let tok = self.tok_vec.get(self.idx).unwrap();
+        if tok.kind != kind {
             false
         } else {
             self.idx += 1;

@@ -17,6 +17,8 @@ fn generate_lval(node: &Node) {
 
 pub fn generate(node: &Node) {
 
+    // 両端にノードを持たない場合
+    // もしくは片方だけに持っている場合
     match node.kind { 
         NodeKind::ND_NUM => {
             match node.val {
@@ -47,10 +49,23 @@ pub fn generate(node: &Node) {
                 None => panic!("gen() error: missing node.rhs — received None instead"),
             }
             
-            println!("  pop rdi");
-            println!("  pop rax");
+            println!("  pop rdi");          // 計算結果を取り出す
+            println!("  pop rax");          // 変数のアドレスを取り出す 
             println!("  mov [rax], rdi");
             println!("  push rdi");
+            return;
+        }
+        
+        NodeKind::ND_RETURN => {
+            match &node.lhs {
+                Some(lhs) => generate(&lhs),
+                None => panic!("gen() error: missing node.lhs — received None instead"),
+            }
+
+            println!("  pop rax");
+            println!("  mov rsp, rbp");
+            println!("  pop rbp");
+            println!("  ret");
             return;
         }
 
@@ -58,7 +73,7 @@ pub fn generate(node: &Node) {
 
     }
 
-    // 数以外は両側に何か持っているはず
+    // 上で処理したノード以外は両側に何か持っているはず
     match &node.lhs {
         Some(lhs) => generate(lhs),
         None => panic!("gen() error: missing node.lhs — received None instead"),
@@ -73,7 +88,6 @@ pub fn generate(node: &Node) {
     println!("  pop rax"); // 右側の項の値
 
     match node.kind {
-        NodeKind::ND_NUM => (),
         NodeKind::ND_ADD => {
             println!("  add rax, rdi");
         }

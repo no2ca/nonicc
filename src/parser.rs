@@ -42,10 +42,18 @@ impl<'a> Parser<'a> {
 }
     }
     
-    /// `expr ";"`
+    /// `expr ";" | "return" expr ";"`
     pub fn stmt(&mut self) -> Box<Node> {
-        let node = self.expr();
+        let node: Box<Node>;
         
+        // exprもしくはreturnのあとにexpr
+        // 木は左から埋めていく
+        if self.tokens.consume_keyword(crate::types::TokenKind::TK_RETURN) {
+            node = Node::new(NodeKind::ND_RETURN, Some(self.expr()), None);
+        } else { 
+            node = self.expr();
+        }
+
         match self.tokens.expect(";") {
             Ok(_) => (),
             Err(e) => {
@@ -55,7 +63,6 @@ impl<'a> Parser<'a> {
         }
         
         node
-
     }
     
     /// `expr = assign`
