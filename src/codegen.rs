@@ -40,8 +40,8 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
             return;
         }
 
-        // ここは右辺値として変数を扱う時
-        // つまり変数の評価をするときに呼び出される
+        // 右辺値として変数を扱う時
+        // つまり変数の評価をするとき
         NodeKind::ND_LVAR => {
             generate_lval(node);
             println!("  pop rax");
@@ -50,25 +50,8 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
             return;
         }
         
-        // 代入文
-        NodeKind::ND_ASSIGN => {
-            match &node.lhs {
-                Some(lhs) => generate_lval(lhs),
-                None => panic!("gen() error: missing node.lhs — received None instead"),
-            }
-
-            match &node.rhs {
-                Some(rhs) => generate(rhs, context),
-                None => panic!("gen() error: missing node.rhs — received None instead"),
-            }
-            
-            println!("  pop rdi");          // 計算結果を取り出す
-            println!("  pop rax");          // 変数のアドレスを取り出す 
-            println!("  mov [rax], rdi");
-            println!("  push rdi");
-            return;
-        }
         
+        // return文
         NodeKind::ND_RETURN => {
             match &node.lhs {
                 Some(lhs) => generate(&lhs, context),
@@ -86,24 +69,43 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
 
     }
     
-    if node.kind == NodeKind::ND_IF {
-        let label_count = context.label_count;
-
-        // exprの結果をスタックトップに積んで戻る
+    // 代入文はgenerate_lvalを呼び出す
+    if node.kind == NodeKind::ND_ASSIGN {
         match &node.lhs {
-            Some(lhs) => generate(lhs, context),
+            Some(lhs) => generate_lval(lhs),
             None => panic!("gen() error: missing node.lhs — received None instead"),
         }
-        println!("  pop rax");
-        println!("  cmp rax, 0");
-        println!("  je .Lend{}", label_count);
 
         match &node.rhs {
             Some(rhs) => generate(rhs, context),
             None => panic!("gen() error: missing node.rhs — received None instead"),
         }
         
-        println!(".Lend{}:", {label_count});
+        println!("  pop rdi");          // 計算結果を取り出す
+        println!("  pop rax");          // 変数のアドレスを取り出す 
+        println!("  mov [rax], rdi");
+        println!("  push rdi");
+        return;
+    }
+    
+    // if文
+    if node.kind == NodeKind::ND_IF {
+        // exprの結果をスタックトップに積んで戻る
+        match &node.lhs {
+            Some(lhs) => generate(lhs, context),
+            None => panic!("gen() error: missing node.lhs — received None instead"),
+        }
+
+        println!("  pop rax");
+        println!("  cmp rax, 0");
+        println!("  je .Lend{}", context.label_count);
+
+        match &node.rhs {
+            Some(rhs) => generate(rhs, context),
+            None => panic!("gen() error: missing node.rhs — received None instead"),
+        }
+
+        println!(".Lend{}:", {context.label_count});
 
         context.label_count += 1;
         
