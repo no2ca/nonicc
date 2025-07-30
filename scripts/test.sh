@@ -4,6 +4,7 @@ assert() {
     expected="$1"
     input="$2"
     ./target/debug/no2cc "$input" > tmp.s
+    cat tmp.s
     gcc -z noexecstack -o tmp tmp.s
     ./tmp
     actual="$?"
@@ -101,6 +102,73 @@ if [ "$option" = "if-stmt" ] || [ "$option" = "all" ]; then
                 return 1;
     return 0;
     '
+
+    assert 20 '
+    x = 1; y = 1; z = 0;
+    if (x)
+        if (y)
+            if (z)
+                return 10;
+    return 20;
+    '
+fi
+
+if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
+    assert 4 '
+    a = 0; b = 1; c = 1;
+    if (a)
+        if (b)
+            if (c)
+                return 1;
+            else
+                return 2;
+        else
+            return 3;
+    else
+        return 4;
+'
+    assert 3 '
+    a = 1; b = 0; c = 1;
+    if (a)
+        if (b)
+            if (c)
+                return 1;
+            else
+                return 2;
+        else
+            return 3;
+    else
+        return 4;
+'
+
+    assert 2 '
+    a = 1; b = 1; c = 0;
+    if (a)
+        if (b)
+            if (c)
+                return 1;
+            else
+                return 2;
+        else
+            return 3;
+    else
+        return 4;
+'
+
+    assert 1 '
+    a = 1; b = 1; c = 1;
+    if (a)
+        if (b)
+            if (c)
+                return 1;
+            else
+                return 2;
+        else
+            return 3;
+    else
+        return 4;
+'
+
 fi
 
 rm -f tmp*
