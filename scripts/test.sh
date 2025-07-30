@@ -1,8 +1,9 @@
 #!/bin/bash
+cargo build
 assert() {
     expected="$1"
     input="$2"
-    cargo run -r "$input" > tmp.s
+    ./target/debug/no2cc "$input" > tmp.s
     gcc -z noexecstack -o tmp tmp.s
     ./tmp
     actual="$?"
@@ -46,12 +47,61 @@ c = b * b; c; '
 
     assert 2 ' foo = 1; bar = 2; foo * bar; '
     assert 4 ' foo = 3; bar = 4; foo = bar; '
+
+    assert 1 ' return 1; '
+    assert 6 ' return 1 + 2 + 3; '
+    assert 6 ' a = 1; return a + 2 + 3; '
+    assert 1 ' return 1; return 2; '
 fi
 
-assert 1 ' return 1; '
-assert 6 ' return 1 + 2 + 3; '
-assert 6 ' a = 1; return a + 2 + 3; '
-assert 1 ' return 1; return 2; '
+if [ "$option" = "if-stmt" ] || [ "$option" = "all" ]; then
+    # 単純なif文
+    assert 10 '
+    x = 1;
+    if (x > 5)
+        return 1;
+    return 10; '
+
+    assert 10 '
+    x = 10;
+    if (x < 5)
+        return 1;
+    return 10; '
+
+    # 四則演算で条件分岐
+    assert 1 '
+    x = 5; y = 10;
+    if (x - y < 0) 
+        return 1;
+    return 0;
+    '
+
+    assert 1 '
+    x = 1; y = 2; z = 3;
+    if (x + y * z > 6) 
+        return 1;
+    return 0;
+    '
+
+    # ローカル変数の更新
+    assert 20 '
+    x = 5; y = 10;
+    if (y == 10)
+        x = 20;
+        return x;
+    return 0;
+    '
+
+    # ネストしたif文
+    assert 1 '
+    x = 1; y = 2; z = 3;
+    if (x)
+        if (y)
+            if (z)
+                return 1;
+    return 0;
+    '
+fi
 
 rm -f tmp*
 
