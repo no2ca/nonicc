@@ -1,5 +1,5 @@
-use rs9cc::types::{ Token, TokenKind::* };
-use rs9cc::lexer::Tokenizer;
+use no2cc::types::{ Token, TokenKind::* };
+use no2cc::lexer::Tokenizer;
 
 /// トークナイザのテスト
 /// EOFは最後の位置+1
@@ -14,7 +14,6 @@ fn tokenize_single_number() {
     ];
     
     assert_eq!(tokens, expected);
-    
 }
 
 #[test]
@@ -28,7 +27,6 @@ fn tokenize_number_with_whitespace() {
     ];
     
     assert_eq!(tokens, expected);
-    
 }
 
 #[test]
@@ -42,7 +40,6 @@ fn tokenize_string_with_whitespace() {
     ];
     
     assert_eq!(tokens, expected);
-    
 } 
 
  
@@ -58,7 +55,6 @@ fn tokenize_ambiguous_equal() {
     ];
     
     assert_eq!(tokens, expected);
-    
 } 
 
 #[test]
@@ -74,7 +70,6 @@ fn tokenize_ambiguous_inequal() {
     ];
     
     assert_eq!(tokens, expected);
-    
 } 
 
 #[test]
@@ -87,7 +82,6 @@ fn tokenize_return() {
     ];
     
     assert_eq!(tokens, expected);
-    
 } 
 
 #[test]
@@ -100,5 +94,28 @@ fn tokenize_returnx() {
     ];
     
     assert_eq!(tokens, expected);
-    
 } 
+
+#[test]
+fn tokenize_if() {
+    let mut tokinizer = Tokenizer::new(" if ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IF, val: None, str: "if".to_string(), len: 2, pos: 1 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 4 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
+
+#[test]
+fn tokenize_ifx() {
+    let mut tokinizer = Tokenizer::new(" ifx ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IDENT, val: None, str: "ifx".to_string(), len: 3, pos: 1 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 5 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
