@@ -5,8 +5,8 @@ use crate::types::TokenKind::{ TK_RETURN, TK_IF };
 use crate::lexer::TokenStream;
 use crate::error_at;
 
-struct Lvars {
-    lvars_vec: Vec<LVar>,
+pub struct Lvars {
+    pub lvars_vec: Vec<LVar>,
 }
 
 impl Lvars {
@@ -32,7 +32,7 @@ impl Lvars {
 
 pub struct Parser<'a> {
     pub tokens: TokenStream<'a>,
-    lvars: Lvars,
+    pub lvars: Lvars,
 }
 
 impl<'a> Parser<'a> {

@@ -41,6 +41,10 @@ fn main() {
 
     eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
 
+    // スタックサイズは16ビットアラインメント
+    // TODO: スタックサイズは常に8バイトとは限らなくなる
+    let stack_size = (((tok.lvars.lvars_vec.len() - 1) * 8 + 15) / 16) * 16;
+
     // コード生成ここから
     println!(".intel_syntax noprefix");
     println!(".globl main");
@@ -48,7 +52,7 @@ fn main() {
     
     println!("  push rbp");
     println!("  mov rbp, rsp");
-    println!("  sub rsp, 208");
+    println!("  sub rsp, {}", stack_size);
 
     let mut codegen_context = CodegenContext::new();
     for node in nodes {
