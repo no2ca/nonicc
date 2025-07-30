@@ -3,6 +3,7 @@
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenKind {
     TK_RETURN,   // return
+    TK_IF,       // if
     TK_RESERVED, // 記号
     TK_IDENT,    // 変数名の識別子
     TK_NUM,      // 整数
@@ -44,6 +45,7 @@ pub enum NodeKind {
     ND_ASSIGN,
     ND_LVAR,    // 左辺値
     ND_RETURN,
+    ND_IF,
 }
 
 #[derive(Debug, Clone)]

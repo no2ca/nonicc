@@ -4,10 +4,10 @@ use anyhow::anyhow;
 use std::env;
 use std::process::exit;
 
-use rs9cc::error_at;
-use rs9cc::lexer::{ Tokenizer, TokenStream };
-use rs9cc::parser::{ Parser };
-use rs9cc::codegen::generate;
+use no2cc::error_at;
+use no2cc::lexer::{ Tokenizer, TokenStream };
+use no2cc::parser::{ Parser };
+use no2cc::codegen::{generate, CodegenContext};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,7 +25,7 @@ fn main() {
     let mut tok = Parser::new(TokenStream::new(tok_vec, input));
 
     // TODO: 無限ループの可能性がある
-    let mut nodes:Vec<Box<rs9cc::types::Node>> = vec![];
+    let mut nodes:Vec<Box<no2cc::types::Node>> = vec![];
     while tok.tokens.idx != tok.tokens.tok_vec.len() - 1  {
         nodes.push(tok.stmt());
     }
@@ -50,8 +50,9 @@ fn main() {
     println!("  mov rbp, rsp");
     println!("  sub rsp, 208");
 
+    let mut codegen_context = CodegenContext::new();
     for node in nodes {
-        generate(&node);
+        generate(&node, &mut codegen_context);
         println!("  pop rax");
     }
 

@@ -62,14 +62,27 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
             
-            // return文をトークナイズする
+            // returnをトークナイズする
             // 次の文字も調べる必要がある
-            if self.input.get(self.pos..).unwrap().starts_with("return") && !self.is_alnum(self.pos + 6) {
-                let next = Token::new(TokenKind::TK_RETURN, "return".to_string(), 6, self.pos);
-                self.pos += 6;
+            let len_return = "return".len();
+            if self.input.get(self.pos..).unwrap().starts_with("return") && !self.is_alnum(self.pos + len_return) {
+                let next = Token::new(TokenKind::TK_RETURN, "return".to_string(), len_return, self.pos);
+                self.pos += len_return;
                 
                 tok_vec.push(next);
 
+                continue;
+            }
+            
+            // ifをトークナイズする
+            // 次の文字も調べる必要がある
+            let len_if = "if".len();
+            if self.input.get(self.pos..).unwrap().starts_with("if") && !self.is_alnum(self.pos + len_if) {
+                let next = Token::new(TokenKind::TK_IF, "if".to_string(), len_if, self.pos);
+                self.pos += len_if;
+                
+                tok_vec.push(next);
+                
                 continue;
             }
 

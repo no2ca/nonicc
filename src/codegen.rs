@@ -2,6 +2,18 @@ use std::process::exit;
 
 use crate::types::{ Node, NodeKind };
 
+pub struct CodegenContext {
+    label_count: usize,
+}
+
+impl CodegenContext {
+    pub fn new() -> CodegenContext {
+        CodegenContext {
+            label_count: 1,
+        }
+    }
+}
+
 /// 代入先のアドレスをスタックに積んで戻る
 fn generate_lval(node: &Node) {
     if node.kind != NodeKind::ND_LVAR {
@@ -15,7 +27,7 @@ fn generate_lval(node: &Node) {
     return;
 }
 
-pub fn generate(node: &Node) {
+pub fn generate(node: &Node, context: &mut CodegenContext) {
 
     // 両端にノードを持たない場合
     // もしくは片方だけに持っている場合
@@ -38,6 +50,7 @@ pub fn generate(node: &Node) {
             return;
         }
         
+        // 代入文
         NodeKind::ND_ASSIGN => {
             match &node.lhs {
                 Some(lhs) => generate_lval(lhs),
@@ -45,7 +58,7 @@ pub fn generate(node: &Node) {
             }
 
             match &node.rhs {
-                Some(rhs) => generate(rhs),
+                Some(rhs) => generate(rhs, context),
                 None => panic!("gen() error: missing node.rhs — received None instead"),
             }
             
@@ -58,29 +71,53 @@ pub fn generate(node: &Node) {
         
         NodeKind::ND_RETURN => {
             match &node.lhs {
-                Some(lhs) => generate(&lhs),
+                Some(lhs) => generate(&lhs, context),
                 None => panic!("gen() error: missing node.lhs — received None instead"),
             }
 
             println!("  pop rax");
             println!("  mov rsp, rbp");
             println!("  pop rbp");
-            println!("  ret");
+            println!("  ret");              // このあとmainに戻って余分に出力されるが実行されないので気にしない
             return;
         }
 
         _ => ()
 
     }
+    
+    if node.kind == NodeKind::ND_IF {
+        let label_count = context.label_count;
 
+        // exprの結果をスタックトップに積んで戻る
+        match &node.lhs {
+            Some(lhs) => generate(lhs, context),
+            None => panic!("gen() error: missing node.lhs — received None instead"),
+        }
+        println!("  pop rax");
+        println!("  cmp rax, 0");
+        println!("  je .Lend{}", label_count);
+
+        match &node.rhs {
+            Some(rhs) => generate(rhs, context),
+            None => panic!("gen() error: missing node.rhs — received None instead"),
+        }
+        
+        println!(".Lend{}:", {label_count});
+
+        context.label_count += 1;
+        
+        return;
+    }
+    
     // 上で処理したノード以外は両側に何か持っているはず
     match &node.lhs {
-        Some(lhs) => generate(lhs),
+        Some(lhs) => generate(lhs, context),
         None => panic!("gen() error: missing node.lhs — received None instead"),
     }
 
     match &node.rhs {
-        Some(rhs) => generate(rhs),
+        Some(rhs) => generate(rhs, context),
         None => panic!("gen() error: missing node.rhs — received None instead"),
     }
 
@@ -122,7 +159,7 @@ pub fn generate(node: &Node) {
             println!("  movzb rax, al");
         }
         _ => {
-            eprintln!("そんなトークン知らねぇ！！\nアセンブリ出力部分が未実装！！");
+            unimplemented!("{:?}", node.kind);
         }
     }
 

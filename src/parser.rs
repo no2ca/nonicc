@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)] 
 
 use crate::types::{ Token, Node, NodeKind, LVar };
+use crate::types::TokenKind::{ TK_RETURN, TK_IF };
 use crate::lexer::TokenStream;
 use crate::error_at;
 
@@ -9,16 +10,16 @@ struct Lvars {
 }
 
 impl Lvars {
-    /// 現在見ている変数名を検索する
     fn new() -> Self {
         // 先頭の識別子は衝突しない名前で
         let head_lvars = LVar::new("__dummy".to_string(), 12, 0);
         Lvars { lvars_vec: vec![head_lvars] }
     }
 
+    /// 現在見ている変数名を検索する
     fn find_lvar(&self, cur: &Token) -> Option<LVar> {
         let lvars_vec = &self.lvars_vec;
-        // 先頭を含めなければ良い
+        // 先頭を含めなければ衝突しない
         for i in 1..lvars_vec.len() {
             let lvar = &lvars_vec[i];
             if lvar.len == cur.len && lvar.name == cur.str {
@@ -39,30 +40,52 @@ impl<'a> Parser<'a> {
         Parser {
             tokens,
             lvars: Lvars::new(),
-}
+        }
     }
     
-    /// `expr ";" | "return" expr ";"`
+    /// stmt = expr ";" | 
+    ///        "return" expr ";" |
+    ///        "if"  "(" expr ")" stmt
     pub fn stmt(&mut self) -> Box<Node> {
-        let node: Box<Node>;
-        
-        // exprもしくはreturnのあとにexpr
-        // 木は左から埋めていく
-        if self.tokens.consume_keyword(crate::types::TokenKind::TK_RETURN) {
-            node = Node::new(NodeKind::ND_RETURN, Some(self.expr()), None);
-        } else { 
-            node = self.expr();
-        }
 
-        match self.tokens.expect(";") {
-            Ok(_) => (),
-            Err(e) => {
+        if self.tokens.consume_keyword(TK_IF) {
+
+            if let Err(e) = self.tokens.expect("(") {
                 eprintln!("Error While Parsing");
-                error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
             }
+
+            let lhs = self.expr();
+            
+            if let Err(e) = self.tokens.expect(")") {
+                eprintln!("Error While Parsing");
+                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+            }
+            
+            let rhs = self.stmt();
+            
+            Node::new(NodeKind::ND_IF, Some(lhs), Some(rhs))
+
+        } else {
+            let node: Box<Node>;
+            // return文の場合
+            // 木は左から埋めていく
+            if self.tokens.consume_keyword(TK_RETURN) {
+                node = Node::new(NodeKind::ND_RETURN, Some(self.expr()), None);
+            } else { 
+                node = self.expr();
+            }
+
+            match self.tokens.expect(";") {
+                Ok(_) => (),
+                Err(e) => {
+                    eprintln!("Error While Parsing");
+                    error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+                }
+            }
+            
+            node
         }
-        
-        node
     }
     
     /// `expr = assign`
