@@ -1,7 +1,7 @@
 #![allow(non_camel_case_types)] 
 
 use crate::types::{ Token, Node, NodeKind, LVar };
-use crate::types::TokenKind::{ TK_RETURN, TK_IF };
+use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE };
 use crate::lexer::TokenStream;
 use crate::error_at;
 
@@ -17,6 +17,7 @@ impl Lvars {
     }
 
     /// 現在見ている変数名を検索する
+    /// ローカル変数のオフセットを決めるのに使用する
     fn find_lvar(&self, cur: &Token) -> Option<LVar> {
         let lvars_vec = &self.lvars_vec;
         // 先頭を含めなければ衝突しない
@@ -48,6 +49,7 @@ impl<'a> Parser<'a> {
     ///        "if"  "(" expr ")" stmt
     pub fn stmt(&mut self) -> Box<Node> {
 
+        // if文をパース
         if self.tokens.consume_keyword(TK_IF) {
 
             if let Err(e) = self.tokens.expect("(") {
@@ -55,27 +57,36 @@ impl<'a> Parser<'a> {
                 error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
             }
 
-            let lhs = self.expr();
+            let condition = self.expr();
             
             if let Err(e) = self.tokens.expect(")") {
                 eprintln!("Error While Parsing");
                 error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
             }
             
-            let rhs = self.stmt();
+            let then = self.stmt();
             
-            Node::new(NodeKind::ND_IF, Some(lhs), Some(rhs))
+            // elseがあるか調べる
+            if self.tokens.consume_keyword(TK_ELSE) {
+                let node_else = Node::new(NodeKind::ND_ELSE, Some(then), Some(self.stmt()));
+                Node::new(NodeKind::ND_IF, Some(condition), Some(node_else))
+            } else {
+                Node::new(NodeKind::ND_IF, Some(condition), Some(then))
+            }
 
         } else {
             let node: Box<Node>;
-            // return文の場合
-            // 木は左から埋めていく
+            
             if self.tokens.consume_keyword(TK_RETURN) {
+                // return文の場合
+                // 木は左から埋めていく
                 node = Node::new(NodeKind::ND_RETURN, Some(self.expr()), None);
             } else { 
+                // それ以外は式 (expr)
                 node = self.expr();
             }
 
+            // セミコロンで文が閉じているか
             match self.tokens.expect(";") {
                 Ok(_) => (),
                 Err(e) => {

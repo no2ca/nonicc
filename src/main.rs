@@ -42,7 +42,7 @@ fn main() {
     eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
 
     // スタックサイズは16ビットアラインメント
-    // TODO: スタックサイズは常に8バイトとは限らなくなる
+    // TODO: 変数サイズは常に8バイトとは限らなくなる
     let stack_size = (((tok.lvars.lvars_vec.len() - 1) * 8 + 15) / 16) * 16;
 
     // コード生成ここから

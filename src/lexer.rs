@@ -85,6 +85,18 @@ impl<'a> Tokenizer<'a> {
                 
                 continue;
             }
+            
+            // elseをトークナイズする
+            // 次の文字も調べる必要がある
+            let len_else = "else".len();
+            if self.input.get(self.pos..).unwrap().starts_with("else") && !self.is_alnum(self.pos + len_else) {
+                let next = Token::new(TokenKind::TK_ELSE, "else".to_string(), len_else, self.pos);
+                self.pos += len_else;
+                
+                tok_vec.push(next);
+                
+                continue;
+            }
 
             // 2文字の予約語をトークナイズする
             let patterns_len_2 = ["<=", ">=", "==", "!="];

@@ -41,7 +41,6 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
         }
 
         // 右辺値として変数を扱う時
-        // つまり変数の評価をするとき
         NodeKind::ND_LVAR => {
             generate_lval(node);
             println!("  pop rax");
@@ -69,7 +68,8 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
 
     }
     
-    // 代入文はgenerate_lvalを呼び出す
+    // 代入文
+    // generate_lvalを呼び出す
     if node.kind == NodeKind::ND_ASSIGN {
         match &node.lhs {
             Some(lhs) => generate_lval(lhs),
@@ -90,24 +90,54 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
     
     // if文
     if node.kind == NodeKind::ND_IF {
+        // ここで管理するのが良くなさすぎる
+        let label_count = context.label_count;
+        context.label_count += 1;
+
         // exprの結果をスタックトップに積んで戻る
         match &node.lhs {
             Some(lhs) => generate(lhs, context),
             None => panic!("gen() error: missing node.lhs — received None instead"),
         }
 
-        println!("  pop rax");
-        println!("  cmp rax, 0");
-        println!("  je .Lend{}", context.label_count);
-
-        match &node.rhs {
-            Some(rhs) => generate(rhs, context),
+        let else_or_stmt = match &node.rhs {
+            Some(rhs) => rhs,
             None => panic!("gen() error: missing node.rhs — received None instead"),
+        };
+        
+        // TODO: なんかよくない
+        if else_or_stmt.kind == NodeKind::ND_ELSE {
+            
+            // elseがある場合
+            println!("  pop rax");
+            println!("  cmp rax, 0");
+            println!("  je .Lelse{}", label_count);
+            
+            // thenの内容を生成
+            match &else_or_stmt.lhs {
+                Some(then_stmt) => generate(&then_stmt, context),
+                None => panic!("gen() error: missing node.lhs — received None instead"),
+            }
+            
+            println!("  jmp .Lend{}", label_count);
+            println!(".Lelse{}: ", label_count);
+
+            // elseの内容を生成
+            match &else_or_stmt.rhs {
+                Some(else_stmt) => generate(&else_stmt, context),
+                None => panic!("gen() error: missing node.rhs — received None instead"),
+            }
+            
+            println!(".Lend{}: ", label_count);
+
+        } else {
+            // if単体の場合
+            println!("  pop rax");
+            println!("  cmp rax, 0");
+            println!("  je .Lend{}", label_count);
+            generate(else_or_stmt, context);
+            println!(".Lend{}: ", {label_count});
         }
-
-        println!(".Lend{}:", {context.label_count});
-
-        context.label_count += 1;
         
         return;
     }

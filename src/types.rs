@@ -4,6 +4,7 @@
 pub enum TokenKind {
     TK_RETURN,   // return
     TK_IF,       // if
+    TK_ELSE,     // else
     TK_RESERVED, // 記号
     TK_IDENT,    // 変数名の識別子
     TK_NUM,      // 整数
@@ -13,7 +14,7 @@ pub enum TokenKind {
 #[derive(PartialEq, Clone, Debug)]
 pub struct Token {
     pub kind: TokenKind,
-    pub val: Option<i32>, // WARNING: この大きさでいいのか？
+    pub val: Option<i32>, // TODO: この大きさでいいのか？
     pub str: String,
     pub len: usize,
     pub pos: usize,
@@ -46,6 +47,7 @@ pub enum NodeKind {
     ND_LVAR,    // 左辺値
     ND_RETURN,
     ND_IF,
+    ND_ELSE,
 }
 
 #[derive(Debug, Clone)]
