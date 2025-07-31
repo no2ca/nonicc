@@ -77,28 +77,38 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
         Some(cond) => generate(cond, context),
         None => panic!("gen() error: missing node.lhs — received None instead"),
     }
-
-    // thenのノードを取得
-    let then = match &node.then {
-        Some(then) => then,
-        None => panic!("gen() error: missing node.rhs — received None instead"),
-    };
     
     println!("  pop rax");
     println!("  cmp rax, 0");
 
+    // thenのノードを取得
+    let then_stmt = match &node.then {
+        Some(then) => then,
+        None => panic!("gen() error: missing node.rhs — received None instead"),
+    };
+
     // elseがある場合
-    if let Some(els) = &node.els {
+    if let Some(els_stmt) = &node.els {
         println!("  je .Lelse{}", label_count);
         
         // thenの内容を生成
-        generate(then, context);
+        if then_stmt.kind == NodeKind::ND_BLOCK || then_stmt.kind == NodeKind::ND_RETURN || then_stmt.kind == NodeKind::ND_IF {
+            generate(&then_stmt, context);
+        } else {
+            generate(&then_stmt, context);
+            println!("  pop rax");
+        }
 
         println!("  jmp .Lend{}", label_count);
         println!(".Lelse{}: ", label_count);
 
         // elseの内容を生成
-        generate(els, context);
+        if els_stmt.kind == NodeKind::ND_BLOCK || els_stmt.kind == NodeKind::ND_RETURN || els_stmt.kind == NodeKind::ND_IF {
+            generate(&els_stmt, context);
+        } else {
+            generate(&els_stmt, context);
+            println!("  pop rax");
+        }
         
         println!(".Lend{}: ", label_count);
 
@@ -107,7 +117,12 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
         println!("  je .Lend{}", label_count);
 
         // thenの内容を生成
-        generate(then, context);
+        if then_stmt.kind == NodeKind::ND_BLOCK || then_stmt.kind == NodeKind::ND_RETURN || then_stmt.kind == NodeKind::ND_IF {
+            generate(&then_stmt, context);
+        } else {
+            generate(&then_stmt, context);
+            println!("  pop rax");
+        }
 
         println!(".Lend{}: ", {label_count});
     }
@@ -123,7 +138,7 @@ fn gen_block(node: &Node, context: &mut CodegenContext) {
         // 毎回popする必要はない
         // バグの原因になった
         // if-else/return/block-stmtは値を持たないため
-        if node.kind == NodeKind::ND_BLOCK || node.kind == NodeKind::ND_RETURN || node.kind == NodeKind::ND_IF {
+        if stmt.kind == NodeKind::ND_BLOCK || stmt.kind == NodeKind::ND_RETURN || stmt.kind == NodeKind::ND_IF {
             generate(&stmt, context);
         } else {
             generate(&stmt, context);
