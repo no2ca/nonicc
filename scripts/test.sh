@@ -1,10 +1,17 @@
 #!/bin/bash
+option="$1"
+debug="$2"
+
 cargo build
 assert() {
     expected="$1"
     input="$2"
-    ./target/debug/no2cc "$input" > tmp.s
-    cat tmp.s
+    if [ "$debug" = "true" ]; then
+        ./target/debug/no2cc -d "$input" > tmp.s
+        cat ./tmp.s
+    else
+        ./target/debug/no2cc "$input" > tmp.s
+    fi
     gcc -z noexecstack -o tmp tmp.s
     ./tmp
     actual="$?"
@@ -16,7 +23,6 @@ assert() {
     fi
 }
 
-option="$1"
 
 if [ "$option" = "all" ]; then
     assert 0 '0;'
@@ -195,41 +201,40 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
     return 255;
     '
 
+    assert 1 '
+    x = 1;
+    if (x == 0)
+        return 0;
+    else if (x == 1)
+        return 1;
+    else 
+        return 3;
+    '
+
+    assert 30 '
+    x = 3;
+    if (x == 1)
+        return 10;
+    else if (x == 2)  
+        return 20;
+    else if (x == 3)
+        return 30;
+    else
+        return 40;
+    '
+
+    assert 2 '
+    a = 1;
+    if (a == 1)
+        a = a + 1;
+    else if (a == 1)
+        a = a + 2;
+    else if (a == 1)
+        a = a + 3;
+    return a;
+    '
+
 fi
-
-
-assert 1 '
-x = 1;
-if (x == 0)
-    return 0;
-else if (x == 1)
-    return 1;
-else 
-    return 3;
-'
-
-assert 30 '
-x = 3;
-if (x == 1)
-    return 10;
-else if (x == 2)  
-    return 20;
-else if (x == 3)
-    return 30;
-else
-    return 40;
-'
-
-assert 2 '
-a = 1;
-if (a == 1)
-    a = a + 1;
-else if (a == 1)
-    a = a + 2;
-else if (a == 1)
-    a = a + 3;
-return a;
-'
 
 rm -f tmp*
 
