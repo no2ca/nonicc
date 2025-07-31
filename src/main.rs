@@ -7,6 +7,7 @@ use no2cc::error_at;
 use no2cc::lexer::{ Tokenizer, TokenStream };
 use no2cc::parser::{ Parser };
 use no2cc::codegen::{generate, CodegenContext};
+use no2cc::types::NodeKind;
 
 
 #[derive(ClapParser, Debug)]
@@ -67,8 +68,12 @@ fn main() {
 
     let mut codegen_context = CodegenContext::new();
     for node in nodes {
-        generate(&node, &mut codegen_context);
-        println!("  pop rax");
+        if node.kind == NodeKind::ND_BLOCK || node.kind == NodeKind::ND_RETURN || node.kind == NodeKind::ND_IF {
+            generate(&node, &mut codegen_context);
+        } else {
+            generate(&node, &mut codegen_context);
+            println!("  pop rax");
+        }
     }
 
     println!("  mov rsp, rbp");

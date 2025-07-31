@@ -111,7 +111,7 @@ impl<'a> Tokenizer<'a> {
             }
 
             // 1文字の予約語をトークナイズする
-            let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "="];
+            let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "=", "{", "}"];
             if let Some(pat) = self.starts_with_in(&patterns_1) {
                 // posは先頭を保存したいので先にTokenを作る
                 let next = Token::new(TokenKind::TK_RESERVED, pat.to_string(), 1, self.pos);
@@ -169,7 +169,7 @@ impl<'a> Tokenizer<'a> {
             // それ以外はエラーを出す
             else {
                 eprintln!("Error While Tokenizing");
-                let e = anyhow!("トークナイズできません");
+                let e = anyhow!("トークナイズできません: {}", c);
                 error_at(self.input, self.pos, e);
             };
         }

@@ -46,7 +46,8 @@ impl<'a> Parser<'a> {
     
     /// stmt = expr ";" | 
     ///        "return" expr ";" |
-    ///        "if"  "(" expr ")" stmt
+    ///        "if"  "(" expr ")" stmt ("else" stmt)? |
+    ///        "{" stmt* "}"
     pub fn stmt(&mut self) -> Box<Node> {
 
         // if文をパース
@@ -77,6 +78,13 @@ impl<'a> Parser<'a> {
             
             Node::new_node_if(cond, then, els)
 
+        } else if self.tokens.consume("{") {
+            // ブロックをパース
+            let mut block_stmt: Vec<Node> = vec![];
+            while !self.tokens.consume("}") {
+                block_stmt.push(*self.stmt());
+            }
+            Node::new_node_block(block_stmt)
         } else {
             let node: Box<Node>;
             

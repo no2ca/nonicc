@@ -48,6 +48,7 @@ pub enum NodeKind {
     ND_RETURN,
     ND_IF,
     ND_ELSE,
+    ND_BLOCK,
 }
 
 #[derive(Debug, Clone)]
@@ -58,8 +59,9 @@ pub struct Node {
     pub cond: Option<Box<Node>>,    // if文の条件
     pub then: Option<Box<Node>>,    // if文のthen
     pub els: Option<Box<Node>>,     // if文のelse
-    pub val: Option<i32>,           // ND_NUMのとき使用
-    pub offset: Option<usize>,      // ND_IDENTのとき使用
+    pub val: Option<i32>,           // ND_NUMのとき
+    pub offset: Option<usize>,      // ND_IDENTのとき
+    pub block_stmt: Option<Vec<Node>> // ND_BLOCKのとき
 }
 
 impl Node {
@@ -73,6 +75,7 @@ impl Node {
             els: None,
             val: None,
             offset: None,
+            block_stmt: None,
         })
     }
 
@@ -86,6 +89,7 @@ impl Node {
             els: None,
             val: Some(val),
             offset: None,
+            block_stmt: None,
         })
     }
 
@@ -99,6 +103,7 @@ impl Node {
             els: None,
             val: None,
             offset: Some(offset),
+            block_stmt: None,
         })
     }
     
@@ -112,6 +117,21 @@ impl Node {
             els, 
             val: None, 
             offset: None, 
+            block_stmt: None,
+        })
+    }
+    
+    pub fn new_node_block(block_stmt: Vec<Node>) -> Box<Node> {
+        Box::new(Node {
+            kind: NodeKind::ND_BLOCK,
+            lhs: None,
+            rhs: None,
+            cond: None,
+            then: None,
+            els: None,
+            val: None,
+            offset: None,
+            block_stmt: Some(block_stmt),
         })
     }
 

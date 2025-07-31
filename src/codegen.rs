@@ -113,6 +113,26 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
     }
 }
 
+fn gen_block(node: &Node, context: &mut CodegenContext) {
+    let block_stmt = match &node.block_stmt {
+        Some(block_stmt) => block_stmt,
+        None => panic!("gen() error: missing node.block_stmt — received None instead"),
+    };
+    
+    for stmt in block_stmt {
+        // 毎回popする必要はない
+        // バグの原因になった
+        // if-else/return/block-stmtは値を持たないため
+        if node.kind == NodeKind::ND_BLOCK || node.kind == NodeKind::ND_RETURN || node.kind == NodeKind::ND_IF {
+            generate(&stmt, context);
+        } else {
+            generate(&stmt, context);
+            println!("  pop rax");
+        }
+    }
+    
+}
+
 pub fn generate(node: &Node, context: &mut CodegenContext) {
 
     match node.kind { 
@@ -146,6 +166,12 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
         // if文
         NodeKind::ND_IF => {
             gen_if(node, context);
+            return;
+        }
+        
+        // ブロック
+        NodeKind::ND_BLOCK => {
+            gen_block(node, context);
             return;
         }
         
