@@ -12,6 +12,12 @@ impl CodegenContext {
             label_count: 1,
         }
     }
+    
+    fn get_label_count(&mut self) -> usize {
+        let label_count = self.label_count;
+        self.label_count += 1;
+        label_count
+    }
 }
 
 /// 代入先のアドレスをスタックに積んで戻る
@@ -90,9 +96,7 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
     
     // if文
     if node.kind == NodeKind::ND_IF {
-        // TODO: ここで管理するのが良くなさすぎる
-        let label_count = context.label_count;
-        context.label_count += 1;
+        let label_count = context.get_label_count();
 
         // conditionの値を生成
         // スタックトップに積んで戻る
