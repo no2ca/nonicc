@@ -1,26 +1,33 @@
 #![allow(non_camel_case_types)]
 
 use anyhow::anyhow;
-use std::env;
-use std::process::exit;
+use clap::Parser as ClapParser;
 
 use no2cc::error_at;
 use no2cc::lexer::{ Tokenizer, TokenStream };
 use no2cc::parser::{ Parser };
 use no2cc::codegen::{generate, CodegenContext};
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Error: 引数の数が間違っています");
-        exit(1);
-    }
 
-    let input = &args[1];
+#[derive(ClapParser, Debug)]
+struct Args {
+    #[arg(index = 1)]
+    input: String,
+
+    #[arg(short = 'd', long = "debug")]
+    debug: bool,
+}
+
+fn main() {
+    let args = Args::parse();
+    let input = &args.input;
+
     let mut input_stream = Tokenizer::new(input);
     let tok_vec = input_stream.tokenize();
 
-    eprintln!("[DEBUG] tokens: \n{:?}", &tok_vec);
+    if args.debug {
+        eprintln!("[DEBUG] tokens: \n{:?}", &tok_vec);
+    }
 
     let mut tok = Parser::new(TokenStream::new(tok_vec, input));
 
@@ -30,8 +37,10 @@ fn main() {
         nodes.push(tok.stmt());
     }
 
-    eprintln!("[DEBUG] tokens.len: {}", tok.tokens.tok_vec.len());
-    eprintln!("[DEBUG] idx: {}", tok.tokens.idx);
+    if args.debug {
+        eprintln!("[DEBUG] tokens.len: {}", tok.tokens.tok_vec.len());
+        eprintln!("[DEBUG] idx: {}", tok.tokens.idx);
+    }
     
     // トークンを最後までパース出来たか調べる
     // EOFトークンがあるので -1 している
@@ -39,7 +48,9 @@ fn main() {
         error_at(tok.tokens.input, tok.tokens.get_current_token().pos, anyhow!("余分なトークンがあります"));
     }
 
-    eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
+    if args.debug {
+        eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
+    }
 
     // スタックサイズは16ビットアラインメント
     // TODO: 変数サイズは常に8バイトとは限らなくなる
