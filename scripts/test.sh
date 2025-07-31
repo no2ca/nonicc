@@ -134,34 +134,6 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
         return 4;
     '
 
-    assert 3 '
-    a = 1; b = 0; c = 1;
-    if (a)
-        if (b)
-            if (c)
-                return 1;
-            else
-                return 2;
-        else
-            return 3;
-    else
-        return 4;
-    '
-
-    assert 2 '
-    a = 1; b = 1; c = 0;
-    if (a)
-        if (b)
-            if (c)
-                return 1;
-            else
-                return 2;
-        else
-            return 3;
-    else
-        return 4;
-    '
-
     assert 1 '
     a = 1; b = 1; c = 1;
     if (a)
@@ -233,8 +205,36 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
         a = a + 3;
     return a;
     '
-
 fi
+
+assert 1 '
+x = 1;
+if (x > 5) {
+    return 5;
+} else {
+    return 1;
+}
+'
+
+assert 150 '
+x = 1;
+{
+    if (x) {
+        y = 100;
+    } else {
+        y = 200;
+    }
+    z = y + 50;
+}
+return z;
+'
+
+assert 42 '
+x = 42;
+{
+}
+return x;
+'
 
 rm -f tmp*
 

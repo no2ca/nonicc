@@ -1,3 +1,4 @@
+debug = true
 test:
 	./scripts/test.sh '$(option)' '$(debug)'
 
