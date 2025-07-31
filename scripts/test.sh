@@ -126,7 +126,8 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
             return 3;
     else
         return 4;
-'
+    '
+
     assert 3 '
     a = 1; b = 0; c = 1;
     if (a)
@@ -139,7 +140,7 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
             return 3;
     else
         return 4;
-'
+    '
 
     assert 2 '
     a = 1; b = 1; c = 0;
@@ -153,7 +154,7 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
             return 3;
     else
         return 4;
-'
+    '
 
     assert 1 '
     a = 1; b = 1; c = 1;
@@ -167,9 +168,68 @@ if [ "$option" = "else-stmt" ] || [ "$option" = "all" ]; then
             return 3;
     else
         return 4;
-'
+    '
+
+    assert 1 '
+    a = 1; b = 1; c = 1;
+    x = 0;
+    if (a)
+        if (b)
+            if (c)
+                x = x + 1;
+            else
+                x = x + 2;
+        else
+            x = x + 3;
+    else
+        x = x + 4;
+
+    return x;
+    '
+
+    assert 255 '
+    x = 1; y = 0;
+    if (x) 
+        if (y)
+            return 0;
+    return 255;
+    '
 
 fi
+
+
+assert 1 '
+x = 1;
+if (x == 0)
+    return 0;
+else if (x == 1)
+    return 1;
+else 
+    return 3;
+'
+
+assert 30 '
+x = 3;
+if (x == 1)
+    return 10;
+else if (x == 2)  
+    return 20;
+else if (x == 3)
+    return 30;
+else
+    return 40;
+'
+
+assert 2 '
+a = 1;
+if (a == 1)
+    a = a + 1;
+else if (a == 1)
+    a = a + 2;
+else if (a == 1)
+    a = a + 3;
+return a;
+'
 
 rm -f tmp*
 
