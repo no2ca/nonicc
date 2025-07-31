@@ -1,3 +1,4 @@
 target/
 tmp*
 *.o
+scripts/run_code.sh
