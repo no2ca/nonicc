@@ -55,16 +55,22 @@ pub struct Node {
     pub kind: NodeKind,
     pub lhs: Option<Box<Node>>,
     pub rhs: Option<Box<Node>>,
-    pub val: Option<i32>,
-    pub offset: Option<usize>,
+    pub cond: Option<Box<Node>>,    // if文の条件
+    pub then: Option<Box<Node>>,    // if文のthen
+    pub els: Option<Box<Node>>,     // if文のelse
+    pub val: Option<i32>,           // ND_NUMのとき使用
+    pub offset: Option<usize>,      // ND_IDENTのとき使用
 }
 
 impl Node {
     pub fn new(kind: NodeKind, lhs: Option<Box<Node>>, rhs: Option<Box<Node>>) -> Box<Node> {
         Box::new(Node {
             kind,
-            lhs: lhs,
+            lhs,
             rhs: rhs,
+            cond: None,
+            then: None,
+            els: None,
             val: None,
             offset: None,
         })
@@ -75,6 +81,9 @@ impl Node {
             kind: NodeKind::ND_NUM,
             lhs: None,
             rhs: None,
+            cond: None,
+            then: None,
+            els: None,
             val: Some(val),
             offset: None,
         })
@@ -85,10 +94,27 @@ impl Node {
             kind: NodeKind::ND_LVAR,
             lhs: None,
             rhs: None,
+            cond: None,
+            then: None,
+            els: None,
             val: None,
             offset: Some(offset),
         })
     }
+    
+    pub fn new_node_if(cond:Box<Node>, then: Box<Node>, els: Option<Box<Node>>) -> Box<Node> {
+        Box::new(Node { 
+            kind: NodeKind::ND_IF, 
+            lhs: None, 
+            rhs: None, 
+            cond: Some(cond), 
+            then: Some(then), 
+            els, 
+            val: None, 
+            offset: None, 
+        })
+    }
+
 }
 
 #[derive(Debug, Clone)]

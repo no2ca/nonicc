@@ -52,27 +52,30 @@ impl<'a> Parser<'a> {
         // if文をパース
         if self.tokens.consume_keyword(TK_IF) {
 
-            if let Err(e) = self.tokens.expect("(") {
+            // 条件のパース
+            self.tokens.expect("(").unwrap_or_else( |e|{
                 eprintln!("Error While Parsing");
                 error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
-            }
+            });
 
-            let condition = self.expr();
+            let cond = self.expr();
             
-            if let Err(e) = self.tokens.expect(")") {
+            self.tokens.expect(")").unwrap_or_else( |e|{
                 eprintln!("Error While Parsing");
                 error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
-            }
+            });
             
+            // thenのパース
             let then = self.stmt();
             
-            // elseがあるか調べる
-            if self.tokens.consume_keyword(TK_ELSE) {
-                let node_else = Node::new(NodeKind::ND_ELSE, Some(then), Some(self.stmt()));
-                Node::new(NodeKind::ND_IF, Some(condition), Some(node_else))
+            // elseの有無で分岐
+            let els = if self.tokens.consume_keyword(TK_ELSE) {
+                Some(self.stmt())
             } else {
-                Node::new(NodeKind::ND_IF, Some(condition), Some(then))
-            }
+                None
+            };
+            
+            Node::new_node_if(cond, then, els)
 
         } else {
             let node: Box<Node>;

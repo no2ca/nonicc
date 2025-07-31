@@ -90,52 +90,48 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
     
     // if文
     if node.kind == NodeKind::ND_IF {
-        // ここで管理するのが良くなさすぎる
+        // TODO: ここで管理するのが良くなさすぎる
         let label_count = context.label_count;
         context.label_count += 1;
 
-        // exprの結果をスタックトップに積んで戻る
-        match &node.lhs {
-            Some(lhs) => generate(lhs, context),
+        // conditionの値を生成
+        // スタックトップに積んで戻る
+        match &node.cond {
+            Some(cond) => generate(cond, context),
             None => panic!("gen() error: missing node.lhs — received None instead"),
         }
 
-        let else_or_stmt = match &node.rhs {
-            Some(rhs) => rhs,
+        // thenのノードを取得
+        let then = match &node.then {
+            Some(then) => then,
             None => panic!("gen() error: missing node.rhs — received None instead"),
         };
         
-        // TODO: なんかよくない
-        if else_or_stmt.kind == NodeKind::ND_ELSE {
-            
-            // elseがある場合
-            println!("  pop rax");
-            println!("  cmp rax, 0");
+        println!("  pop rax");
+        println!("  cmp rax, 0");
+
+        // elseがある場合
+        if let Some(els) = &node.els {
             println!("  je .Lelse{}", label_count);
             
             // thenの内容を生成
-            match &else_or_stmt.lhs {
-                Some(then_stmt) => generate(&then_stmt, context),
-                None => panic!("gen() error: missing node.lhs — received None instead"),
-            }
-            
+            generate(then, context);
+
             println!("  jmp .Lend{}", label_count);
             println!(".Lelse{}: ", label_count);
 
             // elseの内容を生成
-            match &else_or_stmt.rhs {
-                Some(else_stmt) => generate(&else_stmt, context),
-                None => panic!("gen() error: missing node.rhs — received None instead"),
-            }
+            generate(els, context);
             
             println!(".Lend{}: ", label_count);
 
         } else {
             // if単体の場合
-            println!("  pop rax");
-            println!("  cmp rax, 0");
             println!("  je .Lend{}", label_count);
-            generate(else_or_stmt, context);
+
+            // thenの内容を生成
+            generate(then, context);
+
             println!(".Lend{}: ", {label_count});
         }
         
