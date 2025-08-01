@@ -6,7 +6,7 @@ use clap::Parser as ClapParser;
 use no2cc::error_at;
 use no2cc::lexer::{ Tokenizer, TokenStream };
 use no2cc::parser::{ Parser };
-use no2cc::codegen::{generate, CodegenContext};
+use no2cc::codegen::{ generate, CodegenContext };
 use no2cc::types::NodeKind;
 
 
@@ -17,12 +17,15 @@ struct Args {
 
     #[arg(short = 'd', long = "debug")]
     debug: bool,
+    
+    #[arg(short = 'i', long = "ir")]
+    ir: bool,
 }
 
 fn main() {
     let args = Args::parse();
     let input = &args.input;
-
+    
     let mut input_stream = Tokenizer::new(input);
     let tok_vec = input_stream.tokenize();
 
@@ -41,6 +44,7 @@ fn main() {
     if args.debug {
         eprintln!("[DEBUG] tokens.len: {}", tok.tokens.tok_vec.len());
         eprintln!("[DEBUG] idx: {}", tok.tokens.idx);
+        eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
     }
     
     // トークンを最後までパース出来たか調べる
@@ -49,8 +53,18 @@ fn main() {
         error_at(tok.tokens.input, tok.tokens.get_current_token().pos, anyhow!("余分なトークンがあります"));
     }
 
-    if args.debug {
-        eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
+    // 中間表現の出力 (-iが渡されたとき)
+    if args.ir {
+        use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+        for node in &nodes {
+            let mut context = GenIrContext::new();
+            node_to_ir(node, &mut context);
+            eprintln!("[DEBUG] IR:");
+            for x in context.code {
+                eprintln!("{:?}", x);
+            }
+        }
+        return;
     }
 
     // スタックサイズは16ビットアラインメント
