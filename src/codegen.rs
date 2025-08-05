@@ -45,8 +45,9 @@ fn gen_return(node: &Node, context: &mut CodegenContext) {
         None => panic!("gen() error: missing node.lhs — received None instead"),
     }
 
-    if node.kind == NodeKind::ND_BLOCK || node.kind == NodeKind::ND_RETURN || 
-    node.kind == NodeKind::ND_IF || node.kind == NodeKind::ND_FN  {
+    let lhs = node.lhs.as_ref().unwrap();
+    if lhs.kind == NodeKind::ND_BLOCK || lhs.kind == NodeKind::ND_RETURN || 
+    lhs.kind == NodeKind::ND_IF || lhs.kind == NodeKind::ND_FN  {
     } else {
         println!("  pop rax");
     }
