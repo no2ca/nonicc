@@ -1,4 +1,5 @@
 target/
 tmp*
 *.o
+foo.*
 scripts/run_code.sh
