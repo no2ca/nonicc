@@ -82,7 +82,8 @@ fn main() {
 
     let mut codegen_context = CodegenContext::new();
     for node in nodes {
-        if node.kind == NodeKind::ND_BLOCK || node.kind == NodeKind::ND_RETURN || node.kind == NodeKind::ND_IF {
+        if node.kind == NodeKind::ND_BLOCK || node.kind == NodeKind::ND_RETURN || 
+        node.kind == NodeKind::ND_IF || node.kind == NodeKind::ND_FN {
             generate(&node, &mut codegen_context);
         } else {
             generate(&node, &mut codegen_context);

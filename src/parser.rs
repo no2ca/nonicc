@@ -204,7 +204,9 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// `primary = num | ident ("(" ")")? | "(" expr ")" `
     fn primary(&mut self) -> Box<Node> {
+        // "(" expr ")"
         if self.tokens.consume("(") {
             let node = self.expr();
             match self.tokens.expect(")") {
@@ -214,32 +216,48 @@ impl<'a> Parser<'a> {
                     error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                 }
             };
-            node
-        } else if let Some(ident) = self.tokens.consume_ident() {
+            return node;
+        }
+
+        // ident ("(" ")")?
+        if let Some(ident) = self.tokens.consume_ident() {
+            // 関数かどうか調べる
+            if self.tokens.consume("(") {
+                match self.tokens.expect(")") {
+                    Ok(()) => (),
+                    Err(e) => {
+                        eprintln!("Error While Parsing");
+                        error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                    }
+                };
+                return Node::new_node_fn(ident.str);
+            }
+
             // ローカル変数が既にあるか調べる
             if let Some(lvar) = self.lvars.find_lvar(&ident) {
                 // ある場合はそのオフセットを使う
                 let offset = lvar.offset;
-                Node::new_node_lvar(offset)
+                return Node::new_node_lvar(offset);
             } else {
                 // ない場合は手前のに8を足して使う
                 // TokenStreamの初期化時に先頭があるため
                 let offset = self.lvars.lvars_vec.last().unwrap().offset + 8;
                 let lvar = LVar::new(ident.str, ident.len, offset);
                 self.lvars.lvars_vec.push(lvar);
-                Node::new_node_lvar(offset)
+                return Node::new_node_lvar(offset);
             }
-        } else {
-            let mut num = None;
-            match self.tokens.expect_number() {
-                Ok(val) => num = Some(val),
-                Err(e) => {
-                    eprintln!("Error While Parsing");
-                    error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
-                }
-            };
-            Node::new_node_num(num.unwrap())
+            
         }
+
+        let mut num = None;
+        match self.tokens.expect_number() {
+            Ok(val) => num = Some(val),
+            Err(e) => {
+                eprintln!("Error While Parsing");
+                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+            }
+        };
+        Node::new_node_num(num.unwrap())
     }
     
 }

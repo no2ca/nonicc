@@ -49,6 +49,7 @@ pub enum NodeKind {
     ND_IF,
     ND_ELSE,
     ND_BLOCK,
+    ND_FN,
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +62,8 @@ pub struct Node {
     pub els: Option<Box<Node>>,     // if文のelse
     pub val: Option<i32>,           // ND_NUMのとき
     pub offset: Option<usize>,      // ND_IDENTのとき
-    pub block_stmt: Option<Vec<Node>> // ND_BLOCKのとき
+    pub block_stmt: Option<Vec<Node>>, // ND_BLOCKのとき
+    pub fn_name: Option<String>,       // ND_FNのとき
 }
 
 impl Node {
@@ -76,6 +78,7 @@ impl Node {
             val: None,
             offset: None,
             block_stmt: None,
+            fn_name: None,
         })
     }
 
@@ -90,6 +93,7 @@ impl Node {
             val: Some(val),
             offset: None,
             block_stmt: None,
+            fn_name: None,
         })
     }
 
@@ -104,6 +108,7 @@ impl Node {
             val: None,
             offset: Some(offset),
             block_stmt: None,
+            fn_name: None,
         })
     }
     
@@ -118,6 +123,7 @@ impl Node {
             val: None, 
             offset: None, 
             block_stmt: None,
+            fn_name: None,
         })
     }
     
@@ -132,6 +138,22 @@ impl Node {
             val: None,
             offset: None,
             block_stmt: Some(block_stmt),
+            fn_name: None,
+        })
+    }
+    
+    pub fn new_node_fn(fn_name: String) -> Box<Node> {
+        Box::new(Node {
+            kind: NodeKind::ND_FN,
+            lhs: None,
+            rhs: None,
+            cond: None,
+            then: None,
+            els: None,
+            val: None,
+            offset: None,
+            block_stmt: None,
+            fn_name: Some(fn_name.to_string()),
         })
     }
 
