@@ -84,7 +84,9 @@ impl<'a> Parser<'a> {
             while !self.tokens.consume("}") {
                 block_stmt.push(*self.stmt());
             }
+
             Node::new_node_block(block_stmt)
+
         } else {
             let node: Box<Node>;
             
@@ -140,7 +142,7 @@ impl<'a> Parser<'a> {
                 return node;
             }
         }
-    } 
+    }
     
     /// `relational = add ( "<" add | "<=" add | ">" add | ">=" add )*`
     fn relational(&mut self) -> Box<Node> {

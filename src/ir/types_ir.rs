@@ -3,6 +3,14 @@ pub struct VirtualReg{
     pub id: usize,
 }
 
+impl VirtualReg {
+    pub(super) fn new(id: usize) -> VirtualReg {
+        VirtualReg {
+            id,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Operand {
     Reg(VirtualReg),    // 仮想レジスタ名
@@ -13,7 +21,6 @@ pub enum Operand {
 pub enum BinOp {
     Add, Sub, Mul, Div,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum ThreeAddressCode {

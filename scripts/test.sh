@@ -23,7 +23,6 @@ assert() {
     fi
 }
 
-
 if [ "$option" = "all" ]; then
     assert 0 '0;'
 

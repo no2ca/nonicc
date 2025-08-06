@@ -56,14 +56,32 @@ fn main() {
     // 中間表現の出力 (-iが渡されたとき)
     if args.ir {
         use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+        use no2cc::gen_x64;
+        let mut codes = vec![];
         for node in &nodes {
             let mut context = GenIrContext::new();
             node_to_ir(node, &mut context);
             eprintln!("[DEBUG] IR:");
-            for x in context.code {
+            for x in &context.code {
                 eprintln!("{:?}", x);
             }
+            codes.append(&mut context.code);
         }
+        println!(".intel_syntax noprefix");
+        println!(".globl main");
+        println!("main:");
+
+        println!("  push rbp");
+        println!("  mov rbp, rsp");
+        println!("  sub rsp, 208");
+
+        for inst in codes {
+            gen_x64::generate(inst);
+        }
+
+        println!("  mov rsp, rbp");
+        println!("  pop rbp");
+        println!("  ret");
         return;
     }
 
