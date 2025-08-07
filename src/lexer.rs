@@ -49,6 +49,7 @@ impl<'a> Tokenizer<'a> {
         next
     }
     
+    /// トークン化を行う
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tok_vec = vec![];
 
@@ -146,12 +147,12 @@ impl<'a> Tokenizer<'a> {
             }
 
             // 変数をトークナイズする
-            if 'a' <= c && c <= 'z' {
+            if 'A' <= c && c <= 'z' {
                 let head_pos = self.pos;
                 let mut ident = self.next().unwrap().to_string();
                 
-                while let Some(s) = self.peek() {
-                    if 'a' <= s && s <= 'z' {
+                while let Some(_) = self.peek() {
+                    if self.is_alnum(self.pos) {
                         ident.push(self.next().unwrap());
                     } else {
                         break;
