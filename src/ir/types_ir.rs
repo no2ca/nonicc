@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VirtualReg{
     pub id: usize,
 }
@@ -24,9 +24,31 @@ pub enum BinOp {
 
 #[derive(Debug, PartialEq)]
 pub enum ThreeAddressCode {
-    Assign { dest: VirtualReg, src: Operand },
+    // Assign { dest: VirtualReg, src: Operand },
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: Operand, op: BinOp, right: Operand }
 }
 
-pub type IR = Vec<ThreeAddressCode>;
+impl ThreeAddressCode {
+    /// 命令が使用しているレジスタを列挙する
+    pub(crate) fn get_using_regs(&self) -> Vec<VirtualReg> {
+        match self {
+            ThreeAddressCode::LoadImm { dest, .. } => {
+                vec![dest.clone()]
+            }
+            ThreeAddressCode::BinOpCode { dest, left, right ,.. } => {
+                let mut vregs = vec![dest.clone()];
+                match left {
+                    Operand::Reg(vreg) => vregs.push(vreg.clone()),
+                    _ => ()
+                }
+                match right {
+                    Operand::Reg(vreg) => vregs.push(vreg.clone()),
+                    _ => ()
+                }
+                vregs
+            }
+            // _ => unimplemented!("{:?}", self)
+        }
+    }
+}

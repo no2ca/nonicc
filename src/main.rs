@@ -1,5 +1,7 @@
 #![allow(non_camel_case_types)]
 
+use std::collections::HashMap;
+
 use clap::Parser as ClapParser;
 
 use no2cc::lexer::{ Tokenizer, TokenStream };
@@ -49,16 +51,19 @@ fn main() {
     use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
     use no2cc::gen_x64;
     let mut codes = vec![];
+    let mut vreg_to_reg= HashMap::new();
     if args.ir {
+        let mut context = GenIrContext::new();
+        eprintln!("[DEBUG] IR:");
         for node in &nodes {
-            let mut context = GenIrContext::new();
             node_to_ir(node, &mut context);
-            eprintln!("[DEBUG] IR:");
             for x in &context.code {
                 eprintln!("{:?}", x);
             }
             codes.append(&mut context.code);
         }
+        let mut intervals = gen_x64::scan_interval(&codes);
+        vreg_to_reg = gen_x64::linear_reg_alloc(&mut intervals);
     }
 
     // スタックサイズは16ビットアラインメント
@@ -75,9 +80,8 @@ fn main() {
     println!("  sub rsp, {}", stack_size);
 
     if args.ir {
-        for inst in codes {
-            gen_x64::generate(inst);
-        }
+        let generator = gen_x64::Generator::new(codes);
+        generator.gen_all(&vreg_to_reg);
     } else {
         let mut codegen_context = CodegenContext::new();
         for node in nodes {
