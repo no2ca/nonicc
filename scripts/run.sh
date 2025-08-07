@@ -1,4 +1,4 @@
-cargo run -- -d "$1" > tmp.s
+cargo run -- -d -i "$1" > tmp.s
 gcc -z noexecstack -o tmp tmp.s
 cat tmp.s
 ./tmp
