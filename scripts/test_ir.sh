@@ -21,6 +21,7 @@ assert 0 "0;"
 assert 42 "42;"
 
 assert 2 " 1; 2; "
+assert 0 " 2; 1; 0; "
 
 rm -f tmp*
 

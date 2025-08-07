@@ -10,14 +10,23 @@ on:
     workflow_dispatch:
         
 jobs: 
-    make_test:
+    make_test_old:
         runs-on: ubuntu-latest
         steps: 
             - uses: actions/checkout@v4
             - name: Make test.sh executable
               run: chmod +x ./scripts/test.sh
             - name: Run make test all
-              run: make test option=all
+              run: make test_old option=all
+              
+    make_test:
+        runs-on: ubuntu-latest
+        steps: 
+            - uses: actions/checkout@v4
+            - name: Make test_ir.sh executable
+              run: chmod +x ./scripts/test_ir.sh
+            - name: Run make test all
+              run: make test
 
     cargo_test:
         runs-on: ubuntu-latest
