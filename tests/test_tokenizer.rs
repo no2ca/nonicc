@@ -119,3 +119,16 @@ fn tokenize_ifx() {
     
     assert_eq!(tokens, expected);
 }
+
+#[test]
+fn tokenize_ident_with_num() {
+    let mut tokinizer = Tokenizer::new(" A2b_C3; ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IDENT, val: None, str: "A2b_C3".to_string(), len: 6, pos: 1 }, 
+        Token { kind: TK_RESERVED, val: None, str: ";".to_string(), len: 1, pos: 7 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 9 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
