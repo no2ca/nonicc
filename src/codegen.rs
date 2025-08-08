@@ -223,8 +223,8 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
         None => panic!("gen() error: missing node.rhs — received None instead"),
     }
 
-    println!("  pop rdi"); // 左側の項の値
-    println!("  pop rax"); // 右側の項の値
+    println!("  pop rdi"); // 右側の項の値
+    println!("  pop rax"); // 左側の項の値
     
     match node.kind {
         NodeKind::ND_ADD => {

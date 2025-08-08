@@ -20,6 +20,7 @@ pub enum Operand {
 #[derive(Debug, PartialEq)]
 pub enum BinOp {
     Add, Sub, Mul, Div,
+    Le, Lt, Eq, Ne,
 }
 
 #[derive(Debug, PartialEq)]

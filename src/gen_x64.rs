@@ -74,7 +74,26 @@ impl<'a> Generator<'a> {
                         // raxの値が商になる
                         println!("  mov {}, rax", dest_reg);
                     }
-                    // _ => unimplemented!("{:?}", op)
+                    BinOp::Le => {
+                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  setle al");
+                        println!("  movzb {}, al", dest_reg);
+                    }
+                    BinOp::Lt => {
+                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  setl al");
+                        println!("  movzb {}, al", dest_reg);
+                    }
+                    BinOp::Eq => {
+                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  sete al");
+                        println!("  movzb {}, al", dest_reg);
+                    }
+                    BinOp::Ne => {
+                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  setne al");
+                        println!("  movzb {}, al", dest_reg);
+                    }
                 }
                 println!("  mov rax, {}", dest_reg);
             }

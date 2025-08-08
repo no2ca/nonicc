@@ -33,11 +33,13 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             context.emit(ThreeAddressCode::LoadImm { dest: reg.clone(), value: val });
             reg
         }
-        ND_ADD | ND_SUB | ND_MUL | ND_DIV => {
+        ND_ADD | ND_SUB | ND_MUL | ND_DIV | ND_LE | ND_LT | ND_EQ | ND_NE => {
             let lhs  =node.lhs.as_ref().unwrap();
-            let rhs = node.rhs.as_ref().unwrap();
+      let rhs = node.rhs.as_ref().unwrap();
+
             let left = node_to_ir(&lhs, context);
             let right = node_to_ir(&rhs, context);
+
             let id = context.get_register_count();
             let dest = VirtualReg::new(id);
             let op = match node.kind {
@@ -45,6 +47,10 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
                 ND_SUB => BinOp::Sub,
                 ND_MUL => BinOp::Mul,
                 ND_DIV => BinOp::Div,
+                ND_LE => BinOp::Le,
+                ND_LT => BinOp::Lt,
+                ND_EQ => BinOp::Eq,
+                ND_NE => BinOp::Ne,
                 _ => unreachable!(),
             };
             context.emit(ThreeAddressCode::BinOpCode {
