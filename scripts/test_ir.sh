@@ -26,6 +26,9 @@ assert 0 " 5; 4; 3; 2; 1; 0; "
 assert 42 " 3 + 39; "
 assert 42 " 998244353 - 998244311; "
 
+assert 42 " 6 * 7; "
+assert 42 " 300 / 7; "
+
 rm -f tmp*
 
 echo OK
