@@ -74,7 +74,8 @@ fn main() {
             codes.append(&mut context.code);
         }
 
-        let regs = vec!["rbx", "rdi", "r10", "r11", "r12", "r13", "r14", "r15"];
+        // caller-saved (呼び出し側が保存するレジスタ) だけを使用
+        let regs = vec!["rdi", "rsi", "rcx", "r8", "r9", "r10", "r11"];
         let reg_count = regs.len();
 
         let mut intervals = interval_analysis::scan_interval(&codes);
