@@ -26,7 +26,7 @@ jobs:
             - name: Make test_ir.sh executable
               run: chmod +x ./scripts/test_ir.sh
             - name: Run make test all
-              run: make test
+              run: make test option=all
 
     cargo_test:
         runs-on: ubuntu-latest
