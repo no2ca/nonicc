@@ -45,6 +45,20 @@ assert 0 ' 1 > 1; '
 assert 1 ' 1 >= 1; '
 fi
 
+assert 42 " a = 42; "
+assert 2 " a = 1; a = a + 1; "
+assert 3 " a = 1; b = 2; a = a + b;"
+assert 3 " a = 1; b = 2; c = a + b;"
+assert 0 ' a = 0; '
+assert 1 ' a = 1; '
+assert 25 ' a = 5; 
+b = (a + 1) * 2 / 3 + 1; 
+c = b * b; c; '
+
+assert 2 ' foo = 1; bar = 2; foo * bar; '
+assert 4 ' foo = 3; bar = 4; foo = bar; '
+assert 21 " a = 1; b = 2; c = 3; d = 4; e = 5; f = 6; a+b+c+d+e+f; "
+
 rm -f tmp*
 
 echo OK
