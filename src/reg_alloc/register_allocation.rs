@@ -16,7 +16,7 @@ pub fn linear_reg_alloc(intervals: &mut Vec<Interval>, reg_count: usize) -> Hash
         // 生存しているものを残す
         active.retain(|a| a.end > interval.start);
         
-        if active.len() <= reg_count {
+        if active.len() < reg_count {
             // レジスタに空きがある場合
             // ここでpanicするならバグ
             let reg_idx = find_free_register(&active, reg_count).unwrap();
