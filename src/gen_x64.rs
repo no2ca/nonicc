@@ -24,10 +24,21 @@ impl<'a> Generator<'a> {
         match operand {
             Operand::Imm(val) => format!("{}", val),
             Operand::Reg(vreg) => {
-                let reg_id = vreg_to_reg.get(&vreg).unwrap().clone();
-                format!("{}", self.regs[reg_id])
+                let msg = format!("Missing vreg key '{:?}' in 'vreg_to_reg'", vreg);
+                let reg_idx = vreg_to_reg.get(vreg).expect(&msg).clone();
+
+                let msg = format!("vreg_to_reg returned '{:?}' which is out of range", reg_idx);
+                self.regs.get(reg_idx).expect(&msg).to_string()
             }
         }
+    }
+    
+    fn vreg_to_string(&self, vreg: &VirtualReg, vreg_to_reg: &HashMap<VirtualReg, usize>) -> String {
+        let msg = format!("Missing vreg key '{:?}' in 'vreg_to_reg'", vreg);
+        let reg_idx = vreg_to_reg.get(vreg).expect(&msg).clone();
+
+        let msg = format!("vreg_to_reg returned '{:?}' which is out of range", reg_idx);
+        self.regs.get(reg_idx).expect(&msg).to_string()
     }
     
     fn generate(&self, vreg_to_reg: &HashMap<VirtualReg, usize>, instr: &TAC) {
@@ -38,22 +49,34 @@ impl<'a> Generator<'a> {
                 println!("  mov rax, {}", self.regs[dest_reg_idx]);
             }
             TAC::BinOpCode { dest, left, op, right } => {
-                let lft = self.operand_to_string(left, vreg_to_reg);
-                let rgt = self.operand_to_string(right, vreg_to_reg);
-                let dest_reg_idx = vreg_to_reg.get(dest).unwrap().clone();
+                let left_operand = self.operand_to_string(left, vreg_to_reg);
+                let right_operand = self.operand_to_string(right, vreg_to_reg);
+                let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 match op {
                     BinOp::Add => {
-                        println!("  add {}, {}", lft, rgt);
-                        println!("  mov {}, {}", self.regs[dest_reg_idx], lft);
-                        println!("  mov rax, {}", self.regs[dest_reg_idx]);
+                        println!("  add {}, {}", left_operand, right_operand);
+                        println!("  mov {}, {}", dest_reg, left_operand);
                     }
                     BinOp::Sub => {
-                        println!("  sub {}, {}", lft, rgt);
-                        println!("  mov {}, {}", self.regs[dest_reg_idx], lft);
-                        println!("  mov rax, {}", self.regs[dest_reg_idx]);
+                        println!("  sub {}, {}", left_operand, right_operand);
+                        println!("  mov {}, {}", dest_reg, left_operand);
                     }
-                    _ => unimplemented!("{:?}", op)
+                    BinOp::Mul => {
+                        println!("  imul {}, {}", left_operand, right_operand);
+                        println!("  mov {}, {}", dest_reg, left_operand);
+                    }
+                    BinOp::Div => {
+                        // raxの値が割られる数
+                        println!("  mov rax, {}", left_operand);
+                        // raxを128bitに拡張してこれだけ使う
+                        println!("  cqo");
+                        println!("  idiv {}", right_operand);
+                        // raxの値が商になる
+                        println!("  mov {}, rax", dest_reg);
+                    }
+                    // _ => unimplemented!("{:?}", op)
                 }
+                println!("  mov rax, {}", dest_reg);
             }
             // _ => unimplemented!("{:?}", instr)
         }

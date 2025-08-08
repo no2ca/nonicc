@@ -78,12 +78,12 @@ fn main() {
         let reg_count = regs.len();
 
         let mut intervals = interval_analysis::scan_interval(&codes);
-        println!("[DEBUG] intervals");
-        println!("{:?}", intervals);
+        eprintln!("[DEBUG] intervals");
+        eprintln!("{:?}", intervals);
 
         let vreg_to_reg = register_allocation::linear_reg_alloc(&mut intervals, reg_count);
-        println!("[DEBUG] vreg_to_reg");
-        println!("{:?}", vreg_to_reg);
+        eprintln!("[DEBUG] vreg_to_reg");
+        eprintln!("{:?}", vreg_to_reg);
 
         let generator = gen_x64::Generator::new(regs, codes);
         generator.gen_all(&vreg_to_reg);
