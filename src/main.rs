@@ -49,6 +49,7 @@ fn main() {
 
     // 中間表現の生成
     use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+    use no2cc::reg_alloc::{interval_analysis, register_allocation};
     use no2cc::gen_x64;
     let mut codes = vec![];
     let mut vreg_to_reg= HashMap::new();
@@ -62,8 +63,12 @@ fn main() {
             }
             codes.append(&mut context.code);
         }
-        let mut intervals = gen_x64::scan_interval(&codes);
-        vreg_to_reg = gen_x64::linear_reg_alloc(&mut intervals);
+        let mut intervals = interval_analysis::scan_interval(&codes);
+        println!("[DEBUG] intervals");
+        println!("{:?}", intervals);
+        vreg_to_reg = register_allocation::linear_reg_alloc(&mut intervals);
+        println!("[DEBUG] vreg_to_reg");
+        println!("{:?}", vreg_to_reg);
     }
 
     // スタックサイズは16ビットアラインメント

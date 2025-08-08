@@ -1,5 +1,5 @@
 use crate::types::{ Node, NodeKind::* };
-use crate::types_ir::{ BinOp, Operand, ThreeAddressCode, VirtualReg };
+use crate::ir::types_ir::{ BinOp, Operand, ThreeAddressCode, VirtualReg };
 
 pub struct GenIrContext {
     pub code: Vec<ThreeAddressCode>,

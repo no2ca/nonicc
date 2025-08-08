@@ -1,5 +1,5 @@
-use no2cc::gen_ir::{ GenIrContext, node_to_ir };
-use no2cc::types_ir::{ VirtualReg, Operand::*, BinOp::*, ThreeAddressCode::* };
+use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+use no2cc::ir::types_ir::{ VirtualReg, Operand::*, BinOp::*, ThreeAddressCode::* };
 use no2cc::parser::Parser;
 use no2cc::lexer::{ Tokenizer, TokenStream };
 
