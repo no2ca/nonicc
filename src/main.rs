@@ -1,7 +1,5 @@
 #![allow(non_camel_case_types)]
 
-use std::collections::HashMap;
-
 use clap::Parser as ClapParser;
 
 use no2cc::lexer::{ Tokenizer, TokenStream };
@@ -47,30 +45,6 @@ fn main() {
         eprintln!("[DEBUG] node: \n{:?}", nodes.clone());
     }
 
-    // 中間表現の生成
-    use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
-    use no2cc::reg_alloc::{interval_analysis, register_allocation};
-    use no2cc::gen_x64;
-    let mut codes = vec![];
-    let mut vreg_to_reg= HashMap::new();
-    if args.ir {
-        let mut context = GenIrContext::new();
-        eprintln!("[DEBUG] IR:");
-        for node in &nodes {
-            node_to_ir(node, &mut context);
-            for x in &context.code {
-                eprintln!("{:?}", x);
-            }
-            codes.append(&mut context.code);
-        }
-        let mut intervals = interval_analysis::scan_interval(&codes);
-        println!("[DEBUG] intervals");
-        println!("{:?}", intervals);
-        vreg_to_reg = register_allocation::linear_reg_alloc(&mut intervals);
-        println!("[DEBUG] vreg_to_reg");
-        println!("{:?}", vreg_to_reg);
-    }
-
     // スタックサイズは16ビットアラインメント
     // TODO: 変数サイズは常に8バイトとは限らなくなる
     let stack_size = (((parser.lvars.lvars_vec.len() - 1) * 8 + 15) / 16) * 16;
@@ -85,7 +59,33 @@ fn main() {
     println!("  sub rsp, {}", stack_size);
 
     if args.ir {
-        let generator = gen_x64::Generator::new(codes);
+        // 中間表現の生成
+        use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+        use no2cc::reg_alloc::{interval_analysis, register_allocation};
+        use no2cc::gen_x64;
+        let mut codes = vec![];
+        let mut context = GenIrContext::new();
+        eprintln!("[DEBUG] IR:");
+        for node in &nodes {
+            node_to_ir(node, &mut context);
+            for x in &context.code {
+                eprintln!("{:?}", x);
+            }
+            codes.append(&mut context.code);
+        }
+
+        let regs = vec!["rbx", "rdi", "r10", "r11", "r12", "r13", "r14", "r15"];
+        let reg_count = regs.len();
+
+        let mut intervals = interval_analysis::scan_interval(&codes);
+        println!("[DEBUG] intervals");
+        println!("{:?}", intervals);
+
+        let vreg_to_reg = register_allocation::linear_reg_alloc(&mut intervals, reg_count);
+        println!("[DEBUG] vreg_to_reg");
+        println!("{:?}", vreg_to_reg);
+
+        let generator = gen_x64::Generator::new(regs, codes);
         generator.gen_all(&vreg_to_reg);
     } else {
         let mut codegen_context = CodegenContext::new();

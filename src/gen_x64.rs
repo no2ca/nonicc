@@ -7,9 +7,9 @@ pub struct Generator<'a> {
 }
 
 impl<'a> Generator<'a> {
-    pub fn new(codes: Vec<TAC>) -> Generator<'a> {
+    pub fn new(regs: Vec<&'a str>, codes: Vec<TAC>) -> Generator<'a> {
         Generator {
-            regs: vec!["rbx", "rdi", "r10", "r11", "r12", "r13", "r14", "r15"],
+            regs,
             codes,
         }
     }
