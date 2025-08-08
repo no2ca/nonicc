@@ -63,6 +63,7 @@ pub struct Node {
     pub val: Option<i32>,           // ND_NUMのとき
     pub offset: Option<usize>,      // ND_IDENTのとき
     pub block_stmt: Option<Vec<Node>>, // ND_BLOCKのとき
+    pub ident_name: Option<String>,
     pub fn_name: Option<String>,       // ND_FNのとき
 }
 
@@ -78,6 +79,7 @@ impl Node {
             val: None,
             offset: None,
             block_stmt: None,
+            ident_name: None,
             fn_name: None,
         })
     }
@@ -93,11 +95,12 @@ impl Node {
             val: Some(val),
             offset: None,
             block_stmt: None,
+            ident_name: None,
             fn_name: None,
         })
     }
 
-    pub fn new_node_lvar(offset: usize) -> Box<Node> {
+    pub fn new_node_lvar(offset: usize, ident_name: String) -> Box<Node> {
         Box::new(Node {
             kind: NodeKind::ND_LVAR,
             lhs: None,
@@ -108,6 +111,7 @@ impl Node {
             val: None,
             offset: Some(offset),
             block_stmt: None,
+            ident_name: Some(ident_name),
             fn_name: None,
         })
     }
@@ -123,6 +127,7 @@ impl Node {
             val: None, 
             offset: None, 
             block_stmt: None,
+            ident_name: None,
             fn_name: None,
         })
     }
@@ -138,6 +143,7 @@ impl Node {
             val: None,
             offset: None,
             block_stmt: Some(block_stmt),
+            ident_name: None,
             fn_name: None,
         })
     }
@@ -153,6 +159,7 @@ impl Node {
             val: None,
             offset: None,
             block_stmt: None,
+            ident_name: None,
             fn_name: Some(fn_name.to_string()),
         })
     }

@@ -97,6 +97,16 @@ impl<'a> Generator<'a> {
                 }
                 println!("  mov rax, {}", dest_reg);
             }
+            TAC::Assign { dest, src } => {
+                let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
+                let src_reg = self.operand_to_string(src, vreg_to_reg);
+                println!("  mov {dest_reg}, {src_reg}");
+                println!("  mov rax, {}", dest_reg);
+            }
+            TAC::LoadVar { dest, .. } => {
+                let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
+                println!("  mov rax, {}", dest_reg);
+            }
             // _ => unimplemented!("{:?}", instr)
         }
     }

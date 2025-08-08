@@ -25,13 +25,14 @@ pub enum BinOp {
 
 #[derive(Debug, PartialEq)]
 pub enum ThreeAddressCode {
-    // Assign { dest: VirtualReg, src: Operand },
     LoadImm { dest: VirtualReg, value: i32 },
-    BinOpCode { dest: VirtualReg, left: Operand, op: BinOp, right: Operand }
+    BinOpCode { dest: VirtualReg, left: Operand, op: BinOp, right: Operand },
+    Assign { dest: VirtualReg, src: Operand },
+    LoadVar { dest: VirtualReg, var: String },
 }
 
 impl ThreeAddressCode {
-    /// 命令が使用しているレジスタを列挙する
+    /// 命令が使用しているレジスタを列挙して配列を返す
     pub(crate) fn get_using_regs(&self) -> Vec<VirtualReg> {
         match self {
             ThreeAddressCode::LoadImm { dest, .. } => {
@@ -49,7 +50,17 @@ impl ThreeAddressCode {
                 }
                 vregs
             }
-            // _ => unimplemented!("{:?}", self)
+            ThreeAddressCode::Assign { dest, src } => {
+                let mut vregs = vec![dest.clone()];
+                match src {
+                    Operand::Reg(vreg) => vregs.push(vreg.clone()),
+                    _ => ()
+                }
+                vregs
+            }
+            ThreeAddressCode::LoadVar { dest, .. } => {
+                vec![dest.clone()]
+            }
         }
     }
 }

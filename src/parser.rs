@@ -239,14 +239,14 @@ impl<'a> Parser<'a> {
             if let Some(lvar) = self.lvars.find_lvar(&ident) {
                 // ある場合はそのオフセットを使う
                 let offset = lvar.offset;
-                return Node::new_node_lvar(offset);
+                return Node::new_node_lvar(offset, lvar.name);
             } else {
                 // ない場合は手前のに8を足して使う
                 // TokenStreamの初期化時に先頭があるため
                 let offset = self.lvars.lvars_vec.last().unwrap().offset + 8;
                 let lvar = LVar::new(ident.str, ident.len, offset);
-                self.lvars.lvars_vec.push(lvar);
-                return Node::new_node_lvar(offset);
+                self.lvars.lvars_vec.push(lvar.clone());
+                return Node::new_node_lvar(offset, lvar.name);
             }
             
         }
