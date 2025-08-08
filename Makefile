@@ -1,6 +1,6 @@
 debug = true
 test:
-	./scripts/test_ir.sh
+	./scripts/test_ir.sh '$(option)'
 
 test_old:
 	./scripts/test.sh '$(option)' '$(debug)'
