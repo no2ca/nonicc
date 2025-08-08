@@ -209,6 +209,15 @@ fn test_alloc_adding() {
         Interval { vreg: VirtualReg { id: 1 }, start: 1, end: 2, reg: None }, 
         Interval { vreg: VirtualReg { id: 2 }, start: 2, end: 2, reg: None }
     ];
-    let map = linear_reg_alloc(&mut intervals);
-    println!("{:?}", map);
+
+    let mut result: Vec<(VirtualReg, usize)> = linear_reg_alloc(&mut intervals).into_iter().collect();
+    result.sort_by(|a, b| a.0.id.cmp(&b.0.id));
+    
+    let expected = vec![
+        (VirtualReg { id: 0 }, 0),
+        (VirtualReg { id: 1 }, 1),
+        (VirtualReg { id: 2 }, 0),
+    ];
+    
+    assert_eq!(result, expected);
 }
