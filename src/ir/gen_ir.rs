@@ -54,8 +54,11 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             let lhs = node.lhs.as_ref().unwrap();
             let rhs = node.rhs.as_ref().unwrap();
 
-            let left_vreg = node_to_ir(&lhs, context);
-            let right_vreg = node_to_ir(&rhs, context);
+            // ここは最適化しない
+            // divとそれ以外で場合分けが発生して面倒なことになる
+            // 単一責務
+            let right_operand = Operand::Reg(node_to_ir(&rhs, context));
+            let left_operand = Operand::Reg(node_to_ir(&lhs, context));
 
             let id = context.get_register_count();
             let dest_vreg = VirtualReg::new(id);
@@ -72,9 +75,9 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             };
             context.emit(TAC::BinOpCode {
                 dest: dest_vreg,
-                left: Operand::Reg(left_vreg),
+                left: left_operand,
                 op,
-                right: Operand::Reg(right_vreg),
+                right: right_operand,
             });
             dest_vreg
         }
@@ -83,13 +86,19 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             let rhs = node.rhs.as_ref().unwrap();
             
             let left_vreg = node_to_ir(&lhs, context);
-            let right_vreg = node_to_ir(&rhs, context);
+
+            // ここは即値を代入するだけなので大丈夫
+            let right_operand = if rhs.kind == ND_NUM {
+                Operand::Imm(rhs.val.unwrap())
+            } else {
+                Operand::Reg(node_to_ir(&rhs, context))
+            };
 
             let dest_vreg = left_vreg;
 
             context.emit(TAC::Assign { 
                 dest: dest_vreg, 
-                src: Operand::Reg(right_vreg) 
+                src: right_operand 
             });
             
             dest_vreg
