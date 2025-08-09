@@ -46,7 +46,6 @@ impl<'a> Generator<'a> {
             TAC::LoadImm { dest, value} => {
                 let dest_reg_idx = vreg_to_reg.get(dest).unwrap().clone();
                 println!("  mov {}, {}", self.regs[dest_reg_idx], value);            
-                println!("  mov rax, {}", self.regs[dest_reg_idx]);
             }
             TAC::BinOpCode { dest, left, op, right } => {
                 let left_operand = self.operand_to_string(left, vreg_to_reg);
@@ -95,17 +94,16 @@ impl<'a> Generator<'a> {
                         println!("  movzb {}, al", dest_reg);
                     }
                 }
-                println!("  mov rax, {}", dest_reg);
             }
             TAC::Assign { dest, src } => {
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let src_reg = self.operand_to_string(src, vreg_to_reg);
                 println!("  mov {dest_reg}, {src_reg}");
-                println!("  mov rax, {}", dest_reg);
             }
-            TAC::LoadVar { dest, .. } => {
-                let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
-                println!("  mov rax, {}", dest_reg);
+            TAC::LoadVar { .. } => (),
+            TAC::Return { src } => {
+                let src_reg = self.vreg_to_string(src, vreg_to_reg);
+                println!("  mov rax, {}", src_reg);
             }
             // _ => unimplemented!("{:?}", instr)
         }

@@ -11,6 +11,7 @@ impl VirtualReg {
     }
 }
 
+// TODO: Immを一回も使っていない感
 #[derive(Debug, PartialEq)]
 pub enum Operand {
     Reg(VirtualReg),    // 仮想レジスタ名
@@ -29,6 +30,7 @@ pub enum ThreeAddressCode {
     BinOpCode { dest: VirtualReg, left: Operand, op: BinOp, right: Operand },
     Assign { dest: VirtualReg, src: Operand },
     LoadVar { dest: VirtualReg, var: String },
+    Return { src: VirtualReg },
 }
 
 impl ThreeAddressCode {
@@ -60,6 +62,9 @@ impl ThreeAddressCode {
             }
             ThreeAddressCode::LoadVar { dest, .. } => {
                 vec![dest.clone()]
+            }
+            ThreeAddressCode::Return { src } => {
+                vec![src.clone()]
             }
         }
     }

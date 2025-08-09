@@ -104,6 +104,15 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             });
             dest_vreg
         }
+        ND_RETURN => {
+            // lhsにexprが入っている
+            let lhs = node.lhs.as_ref().unwrap();
+            let src_vreg = node_to_ir(lhs, context);
+
+            context.emit(TAC::Return { src: src_vreg });
+            
+            src_vreg
+        }
         _ => unimplemented!("{:?}", node.kind),
     }
 }
