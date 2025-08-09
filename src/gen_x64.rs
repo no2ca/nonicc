@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::ir::types_ir::{ThreeAddressCode as TAC, VirtualReg, BinOp, Operand};
+use crate::ir::types_ir::{BinOp, Label, Operand, ThreeAddressCode as TAC, VirtualReg};
 
 pub struct Generator<'a> {
     regs: Vec<&'a str>,
@@ -33,6 +33,18 @@ impl<'a> Generator<'a> {
         }
     }
     
+    fn label_to_string(&self, label: Label) -> String {
+        match label {
+            Label::Lelse(count) => {
+                format!(".Lelse{count}")
+            }
+            Label::Lend(count) => {
+                format!(".Lend{count}")
+            }
+        }
+    }
+    
+    /// 仮想レジスタを受け取って実際のレジスタ名をStringで返す
     fn vreg_to_string(&self, vreg: &VirtualReg, vreg_to_reg: &HashMap<VirtualReg, usize>) -> String {
         let msg = format!("Missing vreg key '{:?}' in 'vreg_to_reg'", vreg);
         let reg_idx = vreg_to_reg.get(vreg).expect(&msg).clone();
@@ -110,8 +122,27 @@ impl<'a> Generator<'a> {
             TAC::Return { src } => {
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
                 println!("  mov rax, {}", src_reg);
+                
+                // 関数エピローグ
+                println!("  mov rsp, rbp");
+                println!("  pop rbp");
+                println!("  ret");
             }
-            // _ => unimplemented!("{:?}", instr)
+            TAC::IfFalse { cond, label } => {
+                let cond_reg = self.vreg_to_string(cond, vreg_to_reg);
+                let real_label = self.label_to_string(label.clone());
+                println!("  cmp {}, 0", cond_reg);
+                println!("  je {}", real_label);
+            }
+            TAC::GoTo { label } => {
+                let real_label = self.label_to_string(label.clone());
+                println!("  jmp {}", real_label);
+            }
+            TAC::Label { label } => {
+                let real_label = self.label_to_string(label.clone());
+                println!("{}:", real_label);
+            }
+            // ワイルドカードを使わない
         }
     }
 }

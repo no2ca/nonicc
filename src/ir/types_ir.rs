@@ -11,7 +11,6 @@ impl VirtualReg {
     }
 }
 
-// TODO: Immを一回も使っていない感
 #[derive(Debug, PartialEq)]
 pub enum Operand {
     Reg(VirtualReg),    // 仮想レジスタ名
@@ -24,13 +23,22 @@ pub enum BinOp {
     Le, Lt, Eq, Ne,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Label {
+    Lelse(usize),
+    Lend(usize),
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: Operand, op: BinOp, right: Operand },
     Assign { dest: VirtualReg, src: Operand },
-    LoadVar { dest: VirtualReg, var: String },
+    LoadVar { dest: VirtualReg, var: String }, // TODO: これ必要なの
     Return { src: VirtualReg },
+    IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
+    GoTo { label: Label },
+    Label { label: Label },
 }
 
 impl ThreeAddressCode {
@@ -66,6 +74,16 @@ impl ThreeAddressCode {
             ThreeAddressCode::Return { src } => {
                 vec![src.clone()]
             }
+            ThreeAddressCode::IfFalse { cond, .. } => {
+                vec![cond.clone()]
+            }
+            ThreeAddressCode::GoTo { .. } => {
+                Vec::new()
+            }
+            ThreeAddressCode::Label { .. } => {
+                Vec::new()
+            }
+            // ワイルドカードを使わない
         }
     }
 }
