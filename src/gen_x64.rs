@@ -54,15 +54,21 @@ impl<'a> Generator<'a> {
                 match op {
                     BinOp::Add => {
                         println!("  add {}, {}", left_operand, right_operand);
-                        println!("  mov {}, {}", dest_reg, left_operand);
+                        if dest_reg != left_operand {
+                            println!("  mov {}, {}", dest_reg, left_operand);
+                        }
                     }
                     BinOp::Sub => {
                         println!("  sub {}, {}", left_operand, right_operand);
-                        println!("  mov {}, {}", dest_reg, left_operand);
+                        if dest_reg != left_operand {
+                            println!("  mov {}, {}", dest_reg, left_operand);
+                        }
                     }
                     BinOp::Mul => {
                         println!("  imul {}, {}", left_operand, right_operand);
-                        println!("  mov {}, {}", dest_reg, left_operand);
+                        if dest_reg != left_operand {
+                            println!("  mov {}, {}", dest_reg, left_operand);
+                        }
                     }
                     BinOp::Div => {
                         // raxの値が割られる数
