@@ -10,9 +10,8 @@ pub fn linear_reg_alloc(intervals: &mut Vec<Interval>, reg_count: usize) -> Hash
     intervals.sort_by_key(|i| i.start);
     
     let mut active: Vec<&mut Interval> = Vec::new();
-    let mut vreg_to_reg = HashMap::new();
     
-    for interval in intervals {
+    for interval in &mut *intervals {
         // 生存しているものを残す
         active.retain(|a| a.end > interval.start);
         
@@ -21,16 +20,16 @@ pub fn linear_reg_alloc(intervals: &mut Vec<Interval>, reg_count: usize) -> Hash
             // ここでpanicするならバグ
             let reg_idx = find_free_register(&active, reg_count).unwrap();
             
-            // TODO: ここで2つとも更新しないといけないのは良くない
-            // HashMapの戻り値用
-            vreg_to_reg.entry(interval.vreg).or_insert(reg_idx);
-            // 計算用
             interval.reg = Some(reg_idx);
         } else {
             unimplemented!("no handle for spill");
         }
         active.push(interval);
-        eprintln!("[DEBUG] active: {:?}", active);
+    }
+    
+    let mut vreg_to_reg = HashMap::new();
+    for interval in intervals {
+        vreg_to_reg.insert(interval.vreg, interval.reg.unwrap());
     }
     
     vreg_to_reg
@@ -76,8 +75,33 @@ fn test_alloc_binop() {
 }
 
 #[test]
+/// 例: 1 + 2 + 3
+fn test_alloc_longer_op1() {
+    let mut intervals = vec![
+        Interval { vreg: VirtualReg { id: 0 }, start: 0, end: 2, reg: None },
+        Interval { vreg: VirtualReg { id: 1 }, start: 1, end: 2, reg: None }, 
+        Interval { vreg: VirtualReg { id: 2 }, start: 2, end: 4, reg: None }, 
+        Interval { vreg: VirtualReg { id: 3 }, start: 3, end: 4, reg: None }, 
+        Interval { vreg: VirtualReg { id: 4 }, start: 4, end: 4, reg: None }, 
+    ];
+    
+    let mut result: Vec<(VirtualReg, usize)> = linear_reg_alloc(&mut intervals, 8).into_iter().collect();
+    result.sort_by(|a, b| a.0.id.cmp(&b.0.id));
+
+    let expected = vec![
+        (VirtualReg { id: 0 }, 0), 
+        (VirtualReg { id: 1 }, 1), 
+        (VirtualReg { id: 2 }, 0), 
+        (VirtualReg { id: 3 }, 1), 
+        (VirtualReg { id: 4 }, 0),
+    ];
+    
+    assert_eq!(result, expected);
+}
+
+#[test]
 /// 例: 1 + (2 + 3);
-fn test_alloc_longer_op() {
+fn test_alloc_longer_op2() {
     let mut intervals = vec![
         Interval { vreg: VirtualReg { id: 0 }, start: 0, end: 4, reg: None }, 
         Interval { vreg: VirtualReg { id: 1 }, start: 1, end: 3, reg: None }, 
