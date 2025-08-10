@@ -59,8 +59,6 @@ assert 2 ' foo = 1; bar = 2; return foo * bar; '
 assert 4 ' foo = 3; bar = 4; foo = bar; return foo;'
 assert 21 " a = 1; b = 2; c = 3; d = 4; e = 5; f = 6; return a+b+c+d+e+f; "
 
-fi
-
 # 単純なif文
 assert 10 '
 x = 1;
@@ -201,6 +199,68 @@ else if (a == 1)
 else if (a == 1)
     a = a + 3;
 return a;
+'
+
+fi
+
+assert 1 '
+x = 1;
+if (x > 5) {
+    return 5;
+} else {
+    return 1;
+}
+'
+
+assert 150 '
+x = 1;
+{
+    if (x) {
+        y = 100;
+    } else {
+        y = 200;
+    }
+    z = y + 50;
+}
+return z;
+'
+
+assert 42 '
+x = 42;
+{
+}
+return x;
+'
+
+assert 2 '
+a = 1;
+if (a == 1) {
+    a = a + 1;
+} else if (a == 1) {
+    a = a + 2;
+} else if (a == 1) {
+    a = a + 3;
+}
+return a;
+'
+
+assert 1 '
+a = 1; b = 1; c = 1;
+x = 0;
+if (a) {
+    if (b) {
+        if (c) {
+            x = x + 1;
+        } else {
+            x = x + 2;
+        }
+    } else {
+        x = x + 3;
+    }
+} else {
+    x = x + 4;
+}
+return x;
 '
 
 rm -f tmp*
