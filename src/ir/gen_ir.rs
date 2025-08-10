@@ -32,9 +32,9 @@ impl GenIrContext {
             reg
         } else {
             let id = self.get_register_count();
-            let r = VirtualReg { id };
-            self.var_map.insert(name.to_string(), r);
-            r
+            let reg = VirtualReg { id };
+            self.var_map.insert(name.to_string(), reg);
+            reg
         }
     }
     
@@ -118,6 +118,12 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
                 let then_node = node.then.as_ref().unwrap();
                 stmt_to_ir(then_node, context);
                 context.emit(TAC::Label { label: label_end });
+            }
+        }
+        ND_BLOCK => {
+            let stmts = node.block_stmt.as_ref().unwrap();
+            for stmt in stmts {
+                stmt_to_ir(stmt, context);
             }
         }
         _ => {
