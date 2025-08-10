@@ -1,5 +1,7 @@
 #![allow(non_camel_case_types)] 
 
+use anyhow::anyhow;
+
 use crate::types::{ Token, Node, NodeKind, LVar };
 use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE };
 use crate::lexer::TokenStream;
@@ -256,7 +258,12 @@ impl<'a> Parser<'a> {
             Ok(val) => num = Some(val),
             Err(e) => {
                 eprintln!("Error While Parsing");
-                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                let e_unmatch = anyhow!("Error: unmatched `}}`");
+                if "}" == self.tokens.get_current_token().str {
+                    error_at(&self.tokens.input, self.tokens.get_current_token().pos, e_unmatch);
+                } else {
+                    error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                }
             }
         };
         Node::new_node_num(num.unwrap())
