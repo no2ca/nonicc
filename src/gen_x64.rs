@@ -147,6 +147,12 @@ impl<'a> Generator<'a> {
                 println!("  call {}", fn_name);
                 println!("  mov {}, rax", ret_val_reg);
             }
+            TAC::Fn { fn_name } => {
+                println!("{}:", fn_name);
+                println!("  push rbp");
+                println!("  mov rbp, rsp");
+                println!("  sub rsp, {}", 256); // TODO: stack_sizeを計算する
+            }
             // ワイルドカードを使わない
         }
     }

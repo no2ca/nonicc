@@ -121,7 +121,16 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
             }
         }
         ND_BLOCK => {
-            let stmts = node.block_stmt.as_ref().unwrap();
+            let stmts = node.stmts.as_ref().unwrap();
+            for stmt in stmts {
+                stmt_to_ir(stmt, context);
+            }
+        }
+        ND_DEFUN => {
+            let fn_name = node.fn_name.clone().unwrap();
+            context.emit(TAC::Fn { fn_name });
+            
+            let stmts = node.stmts.as_ref().unwrap();
             for stmt in stmts {
                 stmt_to_ir(stmt, context);
             }
@@ -182,7 +191,7 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             });
             dest_vreg
         }
-        ND_FN => {
+        ND_CALL => {
             let fn_name = node.fn_name.clone().unwrap();
             let ret_val = VirtualReg::new(context.get_register_count());
             context.emit(TAC::Call { fn_name, ret_val });

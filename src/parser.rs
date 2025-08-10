@@ -46,11 +46,46 @@ impl<'a> Parser<'a> {
         }
     }
     
+    /// defun = ident "(" ")" "{" stmt* "}"
+    pub fn defun(&mut self) -> Box<Node> {
+        let fn_name: String = match self.tokens.consume_ident() {
+            Some(ident) => ident.str,
+            None => {
+                eprintln!("Error While Parsing");
+                let e = anyhow!("関数名が見つかりません");
+                error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+                // TODO: 同じ型を返す方法が思いつかないのでunreachableを使用
+                unreachable!();
+            }
+        };
+
+        self.tokens.expect("(").unwrap_or_else( |e|{
+            eprintln!("Error While Parsing");
+            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+        });
+        self.tokens.expect(")").unwrap_or_else( |e|{
+            eprintln!("Error While Parsing");
+            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+        });
+        self.tokens.expect("{").unwrap_or_else( |e|{
+            eprintln!("Error While Parsing");
+            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+        });
+        
+        let mut stmts = Vec::new();
+        while !self.tokens.consume("}") {
+            stmts.push(*self.stmt());
+        }
+        
+        Node::new_node_defun(fn_name, stmts)
+
+    }
+    
     /// stmt = expr ";" | 
     ///        "return" expr ";" |
     ///        "if"  "(" expr ")" stmt ("else" stmt)? |
     ///        "{" stmt* "}"
-    pub fn stmt(&mut self) -> Box<Node> {
+    fn stmt(&mut self) -> Box<Node> {
 
         // if文をパース
         if self.tokens.consume_keyword(TK_IF) {
@@ -234,7 +269,7 @@ impl<'a> Parser<'a> {
                         error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                     }
                 };
-                return Node::new_node_fn(ident.str);
+                return Node::new_node_call(ident.str);
             }
 
             // ローカル変数が既にあるか調べる

@@ -1,4 +1,4 @@
-use no2cc::ir::gen_ir::{ GenIrContext, expr_to_ir };
+use no2cc::ir::gen_ir::{stmt_to_ir, GenIrContext};
 use no2cc::ir::types_ir::{ VirtualReg, Operand::*, BinOp::*, ThreeAddressCode::* };
 use no2cc::parser::Parser;
 use no2cc::lexer::{ Tokenizer, TokenStream };
@@ -6,15 +6,15 @@ use no2cc::lexer::{ Tokenizer, TokenStream };
 // 足し算のテスト
 #[test]
 fn ir_add() {
-    let input = " 1 + 1; ";
+    let input = " main() {1 + 1;} ";
     let mut tokenizer = Tokenizer::new(input);
     let tok_vec = tokenizer.tokenize();
     let tokens = TokenStream::new(tok_vec, input);
 
     let mut parser = Parser::new(tokens);
-    let node = parser.stmt();
+    let node = parser.defun();
     let mut context = GenIrContext::new();
-    expr_to_ir(&node, &mut context);
+    stmt_to_ir(&node, &mut context);
 
     let output_ir = context.code;
     let expected = vec![
@@ -29,15 +29,15 @@ fn ir_add() {
 // 四則演算のテスト
 #[test]
 fn ir_basic_op() {
-    let input = " 1 + 2 - 3 * 4 / 5; ";
+    let input = " main() {1 + 2 - 3 * 4 / 5;} ";
     let mut tokenizer = Tokenizer::new(input);
     let tok_vec = tokenizer.tokenize();
     let tokens = TokenStream::new(tok_vec, input);
 
     let mut parser = Parser::new(tokens);
-    let node = parser.stmt();
+    let node = parser.defun();
     let mut context = GenIrContext::new();
-    expr_to_ir(&node, &mut context);
+    stmt_to_ir(&node, &mut context);
 
     let output_ir = context.code;
     let expected = vec![

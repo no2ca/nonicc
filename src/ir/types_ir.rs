@@ -40,6 +40,7 @@ pub enum ThreeAddressCode {
     GoTo { label: Label },
     Label { label: Label },
     Call { fn_name: String, ret_val: VirtualReg },
+    Fn { fn_name: String },
 }
 
 impl ThreeAddressCode {
@@ -87,7 +88,10 @@ impl ThreeAddressCode {
             ThreeAddressCode::Call { ret_val , .. } => {
                 vec![ret_val.clone()]
             }
-            // ワイルドカードを使わない
+            ThreeAddressCode::Fn { .. } => {
+                Vec::new()
+            }
+            // 忘れてバグの原因になるためワイルドカードを使わない
         }
     }
 }

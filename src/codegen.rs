@@ -47,7 +47,7 @@ fn gen_return(node: &Node, context: &mut CodegenContext) {
 
     let lhs = node.lhs.as_ref().unwrap();
     if lhs.kind == NodeKind::ND_BLOCK || lhs.kind == NodeKind::ND_RETURN || 
-    lhs.kind == NodeKind::ND_IF || lhs.kind == NodeKind::ND_FN  {
+    lhs.kind == NodeKind::ND_IF || lhs.kind == NodeKind::ND_CALL  {
     } else {
         println!("  pop rax");
     }
@@ -99,7 +99,7 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
         
         // thenの内容を生成
         if then_stmt.kind == NodeKind::ND_BLOCK || then_stmt.kind == NodeKind::ND_RETURN || 
-        then_stmt.kind == NodeKind::ND_IF || then_stmt.kind == NodeKind::ND_FN  {
+        then_stmt.kind == NodeKind::ND_IF || then_stmt.kind == NodeKind::ND_CALL  {
             generate(&then_stmt, context);
         } else {
             generate(&then_stmt, context);
@@ -111,7 +111,7 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
 
         // elseの内容を生成
         if els_stmt.kind == NodeKind::ND_BLOCK || els_stmt.kind == NodeKind::ND_RETURN || 
-        els_stmt.kind == NodeKind::ND_IF || els_stmt.kind == NodeKind::ND_FN {
+        els_stmt.kind == NodeKind::ND_IF || els_stmt.kind == NodeKind::ND_CALL {
             generate(&els_stmt, context);
         } else {
             generate(&els_stmt, context);
@@ -126,7 +126,7 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
 
         // thenの内容を生成
         if then_stmt.kind == NodeKind::ND_BLOCK || then_stmt.kind == NodeKind::ND_RETURN || 
-        then_stmt.kind == NodeKind::ND_IF || then_stmt.kind == NodeKind::ND_FN {
+        then_stmt.kind == NodeKind::ND_IF || then_stmt.kind == NodeKind::ND_CALL {
             generate(&then_stmt, context);
         } else {
             generate(&then_stmt, context);
@@ -138,7 +138,7 @@ fn gen_if(node: &Node, context: &mut CodegenContext) {
 }
 
 fn gen_block(node: &Node, context: &mut CodegenContext) {
-    let block_stmt = match &node.block_stmt {
+    let block_stmt = match &node.stmts {
         Some(block_stmt) => block_stmt,
         None => panic!("gen() error: missing node.block_stmt — received None instead"),
     };
@@ -148,7 +148,7 @@ fn gen_block(node: &Node, context: &mut CodegenContext) {
         // バグの原因になった
         // if-else/return/block-stmtは値を持たないため
         if stmt.kind == NodeKind::ND_BLOCK || stmt.kind == NodeKind::ND_RETURN || 
-        stmt.kind == NodeKind::ND_IF || stmt.kind == NodeKind::ND_FN {
+        stmt.kind == NodeKind::ND_IF || stmt.kind == NodeKind::ND_CALL {
             generate(&stmt, context);
         } else {
             generate(&stmt, context);
@@ -204,7 +204,7 @@ pub fn generate(node: &Node, context: &mut CodegenContext) {
             return;
         }
         
-        NodeKind::ND_FN => {
+        NodeKind::ND_CALL => {
             gen_fn(node);
             return;
         }

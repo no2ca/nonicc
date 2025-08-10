@@ -32,7 +32,7 @@ fn main() {
     let mut parser = Parser::new(TokenStream::new(tok_vec, input));
     let mut nodes:Vec<Box<no2cc::types::Node>> = vec![];
     while parser.tokens.idx != parser.tokens.tok_vec.len() - 1  {
-        nodes.push(parser.stmt());
+        nodes.push(parser.defun());
     }
 
     if args.debug {
@@ -42,7 +42,7 @@ fn main() {
     // スタックサイズの計算
     // 16ビットアラインメント
     // TODO: 変数サイズは常に8バイトとは限らなくなる
-    let stack_size = (((parser.lvars.lvars_vec.len() - 1) * 8 + 15) / 16) * 16;
+    // let stack_size = (((parser.lvars.lvars_vec.len() - 1) * 8 + 15) / 16) * 16;
 
     // 中間表現の生成
     use no2cc::ir::gen_ir::{ GenIrContext, stmt_to_ir };
@@ -59,7 +59,7 @@ fn main() {
     if args.debug {
         eprintln!("[DEBUG] IR:");
         for code in &codes {
-            println!("{:?}", code);
+            eprintln!("{:?}", code);
         }
     }
 
@@ -82,16 +82,15 @@ fn main() {
     // コード生成ここから
     println!(".intel_syntax noprefix");
     println!(".globl main");
-    println!("main:");
     
-    println!("  push rbp");
-    println!("  mov rbp, rsp");
-    println!("  sub rsp, {}", stack_size);
-
     let generator = gen_x64::Generator::new(regs, codes);
     generator.gen_all(&vreg_to_reg);
 
+    println!("# ---");
+    println!("# generated in main.rs");
+    println!("  mov rax, 0");
     println!("  mov rsp, rbp");
     println!("  pop rbp");
     println!("  ret");
+    println!("# ---");
 }

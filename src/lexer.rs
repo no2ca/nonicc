@@ -11,7 +11,7 @@ pub struct Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
-    pub fn new(input: &str) -> Tokenizer {
+    pub fn new(input: &str) -> Tokenizer<'_> {
         Tokenizer {
             input,
             pos: 0,
@@ -192,7 +192,7 @@ pub struct TokenStream<'a> {
 }
 
 impl<'a> TokenStream<'a> {
-    pub fn new(tok_vec: Vec<Token>, input:&str) -> TokenStream {
+    pub fn new(tok_vec: Vec<Token>, input:&str) -> TokenStream<'_> {
         TokenStream {
             tok_vec,
             idx: 0,

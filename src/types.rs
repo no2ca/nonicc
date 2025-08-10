@@ -44,12 +44,13 @@ pub enum NodeKind {
     ND_EQ,
     ND_NE,
     ND_ASSIGN,
-    ND_LVAR,    // 左辺値
+    ND_LVAR,
     ND_RETURN,
     ND_IF,
     ND_ELSE,
     ND_BLOCK,
-    ND_FN,
+    ND_CALL,
+    ND_DEFUN,
 }
 
 #[derive(Debug, Clone)]
@@ -62,9 +63,9 @@ pub struct Node {
     pub els: Option<Box<Node>>,     // if文のelse
     pub val: Option<i32>,           // ND_NUMのとき
     pub offset: Option<usize>,      // ND_IDENTのとき
-    pub block_stmt: Option<Vec<Node>>, // ND_BLOCKのとき
-    pub ident_name: Option<String>,
-    pub fn_name: Option<String>,       // ND_FNのとき
+    pub stmts: Option<Vec<Node>>, // ND_BLOCK, ND_DEFUNのとき
+    pub ident_name: Option<String>, // ND_LVARのときの変数名
+    pub fn_name: Option<String>,       // ND_CALLのときの関数名
 }
 
 impl Node {
@@ -78,7 +79,7 @@ impl Node {
             els: None,
             val: None,
             offset: None,
-            block_stmt: None,
+            stmts: None,
             ident_name: None,
             fn_name: None,
         })
@@ -94,7 +95,7 @@ impl Node {
             els: None,
             val: Some(val),
             offset: None,
-            block_stmt: None,
+            stmts: None,
             ident_name: None,
             fn_name: None,
         })
@@ -110,7 +111,7 @@ impl Node {
             els: None,
             val: None,
             offset: Some(offset),
-            block_stmt: None,
+            stmts: None,
             ident_name: Some(ident_name),
             fn_name: None,
         })
@@ -126,7 +127,7 @@ impl Node {
             els, 
             val: None, 
             offset: None, 
-            block_stmt: None,
+            stmts: None,
             ident_name: None,
             fn_name: None,
         })
@@ -142,15 +143,15 @@ impl Node {
             els: None,
             val: None,
             offset: None,
-            block_stmt: Some(block_stmt),
+            stmts: Some(block_stmt),
             ident_name: None,
             fn_name: None,
         })
     }
     
-    pub fn new_node_fn(fn_name: String) -> Box<Node> {
+    pub fn new_node_call(fn_name: String) -> Box<Node> {
         Box::new(Node {
-            kind: NodeKind::ND_FN,
+            kind: NodeKind::ND_CALL,
             lhs: None,
             rhs: None,
             cond: None,
@@ -158,7 +159,23 @@ impl Node {
             els: None,
             val: None,
             offset: None,
-            block_stmt: None,
+            stmts: None,
+            ident_name: None,
+            fn_name: Some(fn_name.to_string()),
+        })
+    }
+    
+    pub fn new_node_defun(fn_name: String, stmts: Vec<Node>) -> Box<Node> {
+        Box::new(Node {
+            kind: NodeKind::ND_DEFUN,
+            lhs: None,
+            rhs: None,
+            cond: None,
+            then: None,
+            els: None,
+            val: None,
+            offset: None,
+            stmts: Some(stmts),
             ident_name: None,
             fn_name: Some(fn_name.to_string()),
         })
