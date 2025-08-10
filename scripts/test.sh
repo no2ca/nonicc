@@ -4,7 +4,7 @@ cargo build
 assert() {
     expected="$1"
     input="$2"
-    ./target/debug/no2cc "$input" -d > tmp.s
+    ./target/debug/no2cc "main() { $input }" -d > tmp.s
     cat tmp.s
     gcc -z noexecstack -o tmp tmp.s
     ./tmp
@@ -201,8 +201,6 @@ else if (a == 1)
 return a;
 '
 
-fi
-
 assert 1 '
 x = 1;
 if (x > 5) {
@@ -262,6 +260,8 @@ if (a) {
 }
 return x;
 '
+
+fi
 
 rm -f tmp*
 
