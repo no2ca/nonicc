@@ -60,14 +60,14 @@ fn main() {
 
     if args.ir {
         // 中間表現の生成
-        use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+        use no2cc::ir::gen_ir::{ GenIrContext, stmt_to_ir };
         use no2cc::reg_alloc::{interval_analysis, register_allocation};
         use no2cc::gen_x64;
         let mut codes = vec![];
         let mut context = GenIrContext::new();
         eprintln!("[DEBUG] IR:");
         for node in &nodes {
-            node_to_ir(node, &mut context);
+            stmt_to_ir(node, &mut context);
             for x in &context.code {
                 eprintln!("{:?}", x);
             }

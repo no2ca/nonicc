@@ -49,8 +49,85 @@ impl GenIrContext {
     }
 }
 
-/// TODO: レジスタ返す必要はないのも返しているので要修正
-pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
+pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
+    // stmt_to_irは文を生成するとき
+    // expr_to_irは式を生成して値の入ったレジスタを受け取るとき
+    match node.kind {
+        ND_ASSIGN => {
+            let lhs = node.lhs.as_ref().unwrap();
+            let rhs = node.rhs.as_ref().unwrap();
+            
+            let left_vreg = expr_to_ir(&lhs, context);
+
+            // ここは即値を代入するだけなので大丈夫
+            let right_operand = if rhs.kind == ND_NUM {
+                Operand::Imm(rhs.val.unwrap())
+            } else {
+                Operand::Reg(expr_to_ir(&rhs, context))
+            };
+
+            let dest_vreg = left_vreg;
+
+            context.emit(TAC::Assign { 
+                dest: dest_vreg, 
+                src: right_operand 
+            });
+        }
+        ND_RETURN => {
+            // lhsにexprが入っている
+            let lhs = node.lhs.as_ref().unwrap();
+            let src_vreg = expr_to_ir(lhs, context);
+            context.emit(TAC::Return { src: src_vreg });
+        }
+        ND_IF => {
+            let cond_node = node.cond.as_ref().unwrap();
+            let cond = expr_to_ir(cond_node, context);
+
+            // elseがあるとき
+            if let Some(_els) = node.els.as_ref() {
+                // 条件分岐
+                let label_else = Label::Lelse(context.get_label_count());
+                
+                // if_false goto .Lelse
+                context.emit(TAC::IfFalse { 
+                    cond,
+                    label: label_else.clone()
+                });
+
+                // then
+                let then_node = node.then.as_ref().unwrap();                
+                stmt_to_ir(then_node, context);
+                
+                // goto .Lend
+                let label_end = Label::Lend(context.get_label_count());
+                context.emit(TAC::GoTo { label: label_end.clone() });
+
+                // else
+                context.emit(TAC::Label { label: label_else });
+                stmt_to_ir(_els, context);
+                
+                // .Lend
+                context.emit(TAC::Label { label: label_end });
+            } else {
+                // elseが無いとき
+                let label_end = Label::Lend(context.get_label_count());
+                context.emit(TAC::IfFalse { 
+                    cond,
+                    label: label_end.clone()
+                });
+                let then_node = node.then.as_ref().unwrap();
+                stmt_to_ir(then_node, context);
+                context.emit(TAC::Label { label: label_end });
+            }
+        }
+        _ => {
+            expr_to_ir(node, context);
+        }
+    }
+
+}
+
+pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
     match node.kind {
         ND_NUM => {
             let val = node.val.unwrap();
@@ -66,8 +143,8 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             // ここは最適化しない
             // divとそれ以外で場合分けが発生して面倒なことになる
             // 単一責務
-            let left_operand = Operand::Reg(node_to_ir(&lhs, context));
-            let right_operand = Operand::Reg(node_to_ir(&rhs, context));
+            let left_operand = Operand::Reg(expr_to_ir(&lhs, context));
+            let right_operand = Operand::Reg(expr_to_ir(&rhs, context));
 
             let id = context.get_register_count();
             let dest_vreg = VirtualReg::new(id);
@@ -90,28 +167,6 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             });
             dest_vreg
         }
-        ND_ASSIGN => {
-            let lhs = node.lhs.as_ref().unwrap();
-            let rhs = node.rhs.as_ref().unwrap();
-            
-            let left_vreg = node_to_ir(&lhs, context);
-
-            // ここは即値を代入するだけなので大丈夫
-            let right_operand = if rhs.kind == ND_NUM {
-                Operand::Imm(rhs.val.unwrap())
-            } else {
-                Operand::Reg(node_to_ir(&rhs, context))
-            };
-
-            let dest_vreg = left_vreg;
-
-            context.emit(TAC::Assign { 
-                dest: dest_vreg, 
-                src: right_operand 
-            });
-            
-            dest_vreg
-        }
         ND_LVAR => {
             let name = node.ident_name.clone().unwrap();
             let dest_vreg = context.get_var_reg(&name);
@@ -121,60 +176,6 @@ pub fn node_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             });
             dest_vreg
         }
-        ND_RETURN => {
-            // lhsにexprが入っている
-            let lhs = node.lhs.as_ref().unwrap();
-            let src_vreg = node_to_ir(lhs, context);
-
-            context.emit(TAC::Return { src: src_vreg });
-            
-            src_vreg
-        }
-        ND_IF => {
-            let cond_node = node.cond.as_ref().unwrap();
-            let cond = node_to_ir(cond_node, context);
-
-            // elseがあるとき
-            if let Some(_els) = node.els.as_ref() {
-                // 条件分岐
-                let label_else = Label::Lelse(context.get_label_count());
-                
-                // if_false goto .Lelse
-                context.emit(TAC::IfFalse { 
-                    cond,
-                    label: label_else.clone()
-                });
-
-                // then
-                let then_node = node.then.as_ref().unwrap();                
-                let _then = node_to_ir(then_node, context);
-                
-                // goto .Lend
-                let label_end = Label::Lend(context.get_label_count());
-                context.emit(TAC::GoTo { label: label_end.clone() });
-
-                // else
-                context.emit(TAC::Label { label: label_else });
-                let _els = node_to_ir(_els, context);
-                
-                // .Lend
-                context.emit(TAC::Label { label: label_end });
-                
-                _els
-
-            } else {
-                // elseが無いとき
-                let label_end = Label::Lend(context.get_label_count());
-                context.emit(TAC::IfFalse { 
-                    cond,
-                    label: label_end.clone()
-                });
-                let then_node = node.then.as_ref().unwrap();
-                let _then = node_to_ir(then_node, context);
-                context.emit(TAC::Label { label: label_end });
-                _then
-            }
-        }
-        _ => unimplemented!("{:?}", node.kind),
+        _ => unreachable!("{:?}", node.kind),
     }
 }

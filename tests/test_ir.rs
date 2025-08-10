@@ -1,4 +1,4 @@
-use no2cc::ir::gen_ir::{ GenIrContext, node_to_ir };
+use no2cc::ir::gen_ir::{ GenIrContext, expr_to_ir };
 use no2cc::ir::types_ir::{ VirtualReg, Operand::*, BinOp::*, ThreeAddressCode::* };
 use no2cc::parser::Parser;
 use no2cc::lexer::{ Tokenizer, TokenStream };
@@ -14,7 +14,7 @@ fn ir_add() {
     let mut parser = Parser::new(tokens);
     let node = parser.stmt();
     let mut context = GenIrContext::new();
-    node_to_ir(&node, &mut context);
+    expr_to_ir(&node, &mut context);
 
     let output_ir = context.code;
     let expected = vec![
@@ -37,7 +37,7 @@ fn ir_basic_op() {
     let mut parser = Parser::new(tokens);
     let node = parser.stmt();
     let mut context = GenIrContext::new();
-    node_to_ir(&node, &mut context);
+    expr_to_ir(&node, &mut context);
 
     let output_ir = context.code;
     let expected = vec![
