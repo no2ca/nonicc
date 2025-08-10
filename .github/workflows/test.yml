@@ -14,10 +14,19 @@ jobs:
         runs-on: ubuntu-latest
         steps: 
             - uses: actions/checkout@v4
+            - name: Make test_fn.sh executable
+              run: chmod +x ./scripts/test_fn.sh
+            - name: Run make test all
+              run: make test debug=true
+
+    make_test_in_main:
+        runs-on: ubuntu-latest
+        steps: 
+            - uses: actions/checkout@v4
             - name: Make test.sh executable
               run: chmod +x ./scripts/test.sh
-            - name: Run make test all
-              run: make test option=all
+            - name: Run make test-in-main
+              run: make test-in-main option=all
 
     cargo_test:
         runs-on: ubuntu-latest

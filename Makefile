@@ -1,5 +1,7 @@
-debug = true
 test:
+	./scripts/test_fn.sh '$(debug)'
+
+test-in-main:
 	./scripts/test.sh '$(option)'
 
 run:
