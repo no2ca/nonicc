@@ -32,9 +32,9 @@ pub enum Label {
 #[derive(Debug, PartialEq)]
 pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
-    BinOpCode { dest: VirtualReg, left: Operand, op: BinOp, right: Operand },
+    BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },
     Assign { dest: VirtualReg, src: Operand },
-    LoadVar { dest: VirtualReg, var: String }, // TODO: これ必要なの
+    LoadVar { dest: VirtualReg, name: String }, // TODO: これ必要なの
     Return { src: VirtualReg },
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
     GoTo { label: Label },
@@ -51,16 +51,7 @@ impl ThreeAddressCode {
                 vec![dest.clone()]
             }
             ThreeAddressCode::BinOpCode { dest, left, right ,.. } => {
-                let mut vregs = vec![dest.clone()];
-                match left {
-                    Operand::Reg(vreg) => vregs.push(vreg.clone()),
-                    _ => ()
-                }
-                match right {
-                    Operand::Reg(vreg) => vregs.push(vreg.clone()),
-                    _ => ()
-                }
-                vregs
+                vec![dest.clone(), left.clone(), right.clone()]
             }
             ThreeAddressCode::Assign { dest, src } => {
                 let mut vregs = vec![dest.clone()];

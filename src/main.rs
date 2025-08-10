@@ -83,7 +83,8 @@ fn main() {
     println!(".intel_syntax noprefix");
     println!(".globl main");
     
-    let generator = gen_x64::Generator::new(regs, codes);
+    let map = context.lvar_map;
+    let generator = gen_x64::Generator::new(regs, codes, map);
     generator.gen_all(&vreg_to_reg);
 
     println!("# ---");
@@ -93,4 +94,6 @@ fn main() {
     println!("  pop rbp");
     println!("  ret");
     println!("# ---");
+    
+    eprintln!("[DEBUG] vreg_to_offset: {:?}", generator.vreg_to_offset);
 }

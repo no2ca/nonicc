@@ -4,13 +4,30 @@ use crate::ir::types_ir::{BinOp, Label, Operand, ThreeAddressCode as TAC, Virtua
 pub struct Generator<'a> {
     regs: Vec<&'a str>,
     codes: Vec<TAC>,
+    pub vreg_to_offset: HashMap<VirtualReg, usize>,
 }
 
 impl<'a> Generator<'a> {
-    pub fn new(regs: Vec<&'a str>, codes: Vec<TAC>) -> Generator<'a> {
+    pub fn new(regs: Vec<&'a str>, codes: Vec<TAC>, lvar_map: HashMap<String, VirtualReg>) -> Generator<'a> {
+        // オフセットを計算
+        let mut map = HashMap::new();
+        let mut offset = 0;
+        let mut vec = Vec::new();
+        for x in lvar_map {
+            vec.push(x);
+        }
+
+        // 昇順にする
+        vec.sort_by_key(|i| i.1.id);
+        
+        for (_, vreg) in vec {
+            map.entry(vreg).or_insert(offset + 8);
+            offset += 8;
+        }
         Generator {
             regs,
             codes,
+            vreg_to_offset: map,
         }
     }
     
@@ -60,8 +77,8 @@ impl<'a> Generator<'a> {
                 println!("  mov {}, {}", self.regs[dest_reg_idx], value);            
             }
             TAC::BinOpCode { dest, left, op, right } => {
-                let left_operand = self.operand_to_string(left, vreg_to_reg);
-                let right_operand = self.operand_to_string(right, vreg_to_reg);
+                let left_operand = self.vreg_to_string(left, vreg_to_reg);
+                let right_operand = self.vreg_to_string(right, vreg_to_reg);
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 match op {
                     BinOp::Add => {

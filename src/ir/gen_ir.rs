@@ -7,7 +7,7 @@ pub struct GenIrContext {
     pub code: Vec<TAC>,
     register_count: usize,
     label_count: usize,
-    var_map: HashMap<String, VirtualReg>,
+    pub lvar_map: HashMap<String, VirtualReg>,
 }
 
 impl GenIrContext {
@@ -16,7 +16,7 @@ impl GenIrContext {
             code: vec![],
             register_count: 0,
             label_count: 0,
-            var_map: HashMap::new(),
+            lvar_map: HashMap::new(),
         }
     }
 
@@ -28,12 +28,12 @@ impl GenIrContext {
     
     /// HashMapを使用して既にレジスタが割り当てられているか調べる
     fn get_var_reg(&mut self, name: &str) -> VirtualReg {
-        if let Some(&reg) = self.var_map.get(name) {
+        if let Some(&reg) = self.lvar_map.get(name) {
             reg
         } else {
             let id = self.get_register_count();
             let reg = VirtualReg { id };
-            self.var_map.insert(name.to_string(), reg);
+            self.lvar_map.insert(name.to_string(), reg);
             reg
         }
     }
@@ -158,8 +158,8 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             // ここは最適化しない
             // divとそれ以外で場合分けが発生して面倒なことになる
             // 単一責務
-            let left_operand = Operand::Reg(expr_to_ir(&lhs, context));
-            let right_operand = Operand::Reg(expr_to_ir(&rhs, context));
+            let left_operand = expr_to_ir(&lhs, context);
+            let right_operand = expr_to_ir(&rhs, context);
 
             let id = context.get_register_count();
             let dest_vreg = VirtualReg::new(id);
@@ -185,10 +185,12 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
         ND_LVAR => {
             let name = node.ident_name.clone().unwrap();
             let dest_vreg = context.get_var_reg(&name);
+            /*
             context.emit(TAC::LoadVar { 
                 dest: dest_vreg, 
-                var: name
+                name
             });
+            */
             dest_vreg
         }
         ND_CALL => {
