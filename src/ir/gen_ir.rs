@@ -126,6 +126,10 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
                 stmt_to_ir(stmt, context);
             }
         }
+        ND_FN => {
+            let fn_name = node.fn_name.clone().unwrap();
+            context.emit(TAC::Call { fn_name });
+        }
         _ => {
             expr_to_ir(node, context);
         }

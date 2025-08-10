@@ -142,6 +142,9 @@ impl<'a> Generator<'a> {
                 let real_label = self.label_to_string(label.clone());
                 println!("{}:", real_label);
             }
+            TAC::Call { fn_name } => {
+                println!("call {}", fn_name);
+            }
             // ワイルドカードを使わない
         }
     }
