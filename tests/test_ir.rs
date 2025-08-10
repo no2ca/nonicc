@@ -18,8 +18,9 @@ fn ir_add() {
 
     let output_ir = context.code;
     let expected = vec![
-        LoadImm { dest: VirtualReg { id: 0 }, value: 1 },
-        LoadImm { dest: VirtualReg { id: 1 }, value: 1 },
+        Fn { fn_name: "main".to_string() }, 
+        LoadImm { dest: VirtualReg { id: 0 }, value: 1 }, 
+        LoadImm { dest: VirtualReg { id: 1 }, value: 1 }, 
         BinOpCode { dest: VirtualReg { id: 2 }, left: Reg(VirtualReg { id: 0 }), op: Add, right: Reg(VirtualReg { id: 1 }) }
     ];
 
@@ -41,15 +42,16 @@ fn ir_basic_op() {
 
     let output_ir = context.code;
     let expected = vec![
-        LoadImm { dest: VirtualReg { id: 0 }, value: 1 },
-        LoadImm { dest: VirtualReg { id: 1 }, value: 2 },
-        BinOpCode { dest: VirtualReg { id: 2 }, left: Reg(VirtualReg { id: 0 }), op: Add, right: Reg(VirtualReg { id: 1 }) },
-        LoadImm { dest: VirtualReg { id: 3 }, value: 3 },
-        LoadImm { dest: VirtualReg { id: 4 }, value: 4 },
-        BinOpCode { dest: VirtualReg { id: 5 }, left: Reg(VirtualReg { id: 3 }), op: Mul, right: Reg(VirtualReg { id: 4 }) },
-        LoadImm { dest: VirtualReg { id: 6 }, value: 5 },
-        BinOpCode { dest: VirtualReg { id: 7 }, left: Reg(VirtualReg { id: 5 }), op: Div, right: Reg(VirtualReg { id: 6 }) },
-        BinOpCode { dest: VirtualReg { id: 8 }, left: Reg(VirtualReg { id: 2 }), op: Sub, right: Reg(VirtualReg { id: 7 }) },
+        Fn { fn_name: "main".to_string() }, 
+        LoadImm { dest: VirtualReg { id: 0 }, value: 1 }, 
+        LoadImm { dest: VirtualReg { id: 1 }, value: 2 }, 
+        BinOpCode { dest: VirtualReg { id: 2 }, left: Reg(VirtualReg { id: 0 }), op: Add, right: Reg(VirtualReg { id: 1 }) }, 
+        LoadImm { dest: VirtualReg { id: 3 }, value: 3 }, 
+        LoadImm { dest: VirtualReg { id: 4 }, value: 4 }, 
+        BinOpCode { dest: VirtualReg { id: 5 }, left: Reg(VirtualReg { id: 3 }), op: Mul, right: Reg(VirtualReg { id: 4 }) }, 
+        LoadImm { dest: VirtualReg { id: 6 }, value: 5 }, 
+        BinOpCode { dest: VirtualReg { id: 7 }, left: Reg(VirtualReg { id: 5 }), op: Div, right: Reg(VirtualReg { id: 6 }) }, 
+        BinOpCode { dest: VirtualReg { id: 8 }, left: Reg(VirtualReg { id: 2 }), op: Sub, right: Reg(VirtualReg { id: 7 }) }
     ];
 
     assert_eq!(output_ir, expected);
