@@ -126,10 +126,6 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
                 stmt_to_ir(stmt, context);
             }
         }
-        ND_FN => {
-            let fn_name = node.fn_name.clone().unwrap();
-            context.emit(TAC::Call { fn_name });
-        }
         _ => {
             expr_to_ir(node, context);
         }
@@ -185,6 +181,12 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
                 var: name
             });
             dest_vreg
+        }
+        ND_FN => {
+            let fn_name = node.fn_name.clone().unwrap();
+            let ret_val = VirtualReg::new(context.get_register_count());
+            context.emit(TAC::Call { fn_name, ret_val });
+            ret_val
         }
         _ => unreachable!("{:?}", node.kind),
     }

@@ -50,14 +50,16 @@ fn main() {
     use no2cc::gen_x64;
     let mut codes = vec![];
     let mut context = GenIrContext::new();
+
+    for node in &nodes {
+        stmt_to_ir(node, &mut context);
+        codes.append(&mut context.code);
+    }
+    
     if args.debug {
         eprintln!("[DEBUG] IR:");
-        for node in &nodes {
-            stmt_to_ir(node, &mut context);
-            for x in &context.code {
-                eprintln!("{:?}", x);
-            }
-            codes.append(&mut context.code);
+        for code in &codes {
+            println!("{:?}", code);
         }
     }
 

@@ -39,7 +39,7 @@ pub enum ThreeAddressCode {
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
     GoTo { label: Label },
     Label { label: Label },
-    Call { fn_name: String },
+    Call { fn_name: String, ret_val: VirtualReg },
 }
 
 impl ThreeAddressCode {
@@ -84,8 +84,8 @@ impl ThreeAddressCode {
             ThreeAddressCode::Label { .. } => {
                 Vec::new()
             }
-            ThreeAddressCode::Call { .. } => {
-                Vec::new()
+            ThreeAddressCode::Call { ret_val , .. } => {
+                vec![ret_val.clone()]
             }
             // ワイルドカードを使わない
         }
