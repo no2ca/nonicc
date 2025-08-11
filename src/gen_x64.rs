@@ -8,10 +8,10 @@ pub struct Generator<'a> {
 }
 
 impl<'a> Generator<'a> {
+    /// ここで <変数名:仮想レジスタ> のHashMapを <仮想レジスタ:オフセット> のHashMapに昇順で変換
+    /// TODO: 責務を分離して単体テストやる
     pub fn new(regs: Vec<&'a str>, codes: Vec<TAC>, lvar_map: HashMap<String, VirtualReg>) -> Generator<'a> {
-        // オフセットを計算
-        let mut map = HashMap::new();
-        let mut offset = 0;
+        // 変数名:仮想レジスタのHashMapを受け取る
         let mut vec = Vec::new();
         for x in lvar_map {
             vec.push(x);
@@ -20,10 +20,14 @@ impl<'a> Generator<'a> {
         // 昇順にする
         vec.sort_by_key(|i| i.1.id);
         
+        // オフセットを計算
+        let mut map = HashMap::new();
+        let mut offset = 0;
         for (_, vreg) in vec {
             map.entry(vreg).or_insert(offset + 8);
             offset += 8;
         }
+
         Generator {
             regs,
             codes,
@@ -31,6 +35,7 @@ impl<'a> Generator<'a> {
         }
     }
     
+    /// アセンブリ生成はここから
     pub fn gen_all(&self, vreg_to_reg: &HashMap<VirtualReg, usize>) {
         for instr in &self.codes {
             self.generate(&vreg_to_reg, instr);
@@ -139,7 +144,6 @@ impl<'a> Generator<'a> {
             TAC::Return { src } => {
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
                 println!("  mov rax, {}", src_reg);
-                
                 // 関数エピローグ
                 println!("  mov rsp, rbp");
                 println!("  pop rbp");
@@ -165,10 +169,18 @@ impl<'a> Generator<'a> {
                 println!("  mov {}, rax", ret_val_reg);
             }
             TAC::Fn { fn_name } => {
+                // 最大オフセットを使用してスタックサイズを計算
+                let mut offset_max: usize = 0; 
+                for (_, offset) in self.vreg_to_offset.clone() {
+                    if offset > offset_max {
+                        offset_max = offset;
+                    }
+                }
+                let stack_size = ((offset_max + 15) / 16) * 16;
                 println!("{}:", fn_name);
                 println!("  push rbp");
                 println!("  mov rbp, rsp");
-                println!("  sub rsp, {}", 256); // TODO: stack_sizeを計算する
+                println!("  sub rsp, {}", stack_size);
             }
             // ワイルドカードを使わない
         }
