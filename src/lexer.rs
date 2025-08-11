@@ -112,7 +112,7 @@ impl<'a> Tokenizer<'a> {
             }
 
             // 1文字の予約語をトークナイズする
-            let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "=", "{", "}"];
+            let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "=", "{", "}", ","];
             if let Some(pat) = self.starts_with_in(&patterns_1) {
                 // posは先頭を保存したいので先にTokenを作る
                 let next = Token::new(TokenKind::TK_RESERVED, pat.to_string(), 1, self.pos);
