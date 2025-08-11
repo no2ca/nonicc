@@ -65,7 +65,8 @@ pub struct Node {
     pub offset: Option<usize>,      // ND_IDENTのとき
     pub stmts: Option<Vec<Node>>, // ND_BLOCK, ND_DEFUNのとき
     pub ident_name: Option<String>, // ND_LVARのときの変数名
-    pub fn_name: Option<String>,       // ND_CALLのときの関数名
+    pub fn_name: Option<String>,       // ND_CALL, ND_DEFUNのときの関数名
+    pub args: Option<Vec<Node>>, // ND_CALL, ND_DEFUNのとき
 }
 
 impl Node {
@@ -82,6 +83,7 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: None,
+            args: None,
         })
     }
 
@@ -98,6 +100,7 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: None,
+            args: None,
         })
     }
 
@@ -114,6 +117,7 @@ impl Node {
             stmts: None,
             ident_name: Some(ident_name),
             fn_name: None,
+            args: None,
         })
     }
     
@@ -130,6 +134,7 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: None,
+            args: None,
         })
     }
     
@@ -146,6 +151,7 @@ impl Node {
             stmts: Some(block_stmt),
             ident_name: None,
             fn_name: None,
+            args: None,
         })
     }
     
@@ -162,10 +168,11 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: Some(fn_name.to_string()),
+            args: None,
         })
     }
     
-    pub fn new_node_defun(fn_name: String, stmts: Vec<Node>) -> Box<Node> {
+    pub fn new_node_defun(fn_name: String, stmts: Vec<Node>, args: Vec<Node>) -> Box<Node> {
         Box::new(Node {
             kind: NodeKind::ND_DEFUN,
             lhs: None,
@@ -178,6 +185,7 @@ impl Node {
             stmts: Some(stmts),
             ident_name: None,
             fn_name: Some(fn_name.to_string()),
+            args: Some(args),
         })
     }
 

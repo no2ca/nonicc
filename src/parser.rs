@@ -46,7 +46,41 @@ impl<'a> Parser<'a> {
         }
     }
     
-    /// defun = ident "(" ")" "{" stmt* "}"
+    fn args(&mut self) -> Vec<Node> {
+        self.tokens.expect("(").unwrap_or_else( |e|{
+            eprintln!("Error While Parsing");
+            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+        });
+        let mut args = Vec::new();
+        if !self.tokens.consume(")") {
+            loop {
+                let arg = match self.tokens.consume_ident() {
+                    // TODO: ここのoffsetの値を使うことがないので適当な値を設定している
+                    // TODO: offset使わないことが分かったら消そう
+                    Some(t) => *Node::new_node_lvar(9999, t.str),
+                    None => {
+                        eprintln!("Error While Parsing");
+                        let e = anyhow!("引数は識別子である必要があります");
+                        error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                    }
+                };
+                args.push(arg);
+                if self.tokens.consume(",") {
+                    continue;
+                } else {
+                    match self.tokens.expect(")") {
+                        Ok(()) => break,
+                        Err(e) => {
+                            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                        }
+                    }
+                }
+            }
+        }
+        args
+    }
+    
+    /// defun = ident "(" arg, .. ")" "{" stmt* "}"
     pub fn defun(&mut self) -> Box<Node> {
         let fn_name: String = match self.tokens.consume_ident() {
             Some(ident) => ident.str,
@@ -57,14 +91,10 @@ impl<'a> Parser<'a> {
             }
         };
 
-        self.tokens.expect("(").unwrap_or_else( |e|{
-            eprintln!("Error While Parsing");
-            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
-        });
-        self.tokens.expect(")").unwrap_or_else( |e|{
-            eprintln!("Error While Parsing");
-            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
-        });
+
+        let args = self.args();
+        eprintln!("[DEBUG] args: {:?}", args);
+
         self.tokens.expect("{").unwrap_or_else( |e|{
             eprintln!("Error While Parsing");
             error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
@@ -75,7 +105,7 @@ impl<'a> Parser<'a> {
             stmts.push(*self.stmt());
         }
         
-        Node::new_node_defun(fn_name, stmts)
+        Node::new_node_defun(fn_name, stmts, args)
 
     }
     
