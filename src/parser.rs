@@ -54,8 +54,6 @@ impl<'a> Parser<'a> {
                 eprintln!("Error While Parsing");
                 let e = anyhow!("関数名が見つかりません");
                 error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
-                // TODO: 同じ型を返す方法が思いつかないのでunreachableを使用
-                unreachable!();
             }
         };
 
@@ -288,9 +286,8 @@ impl<'a> Parser<'a> {
             
         }
 
-        let mut num = None;
-        match self.tokens.expect_number() {
-            Ok(val) => num = Some(val),
+        let num = match self.tokens.expect_number() {
+            Ok(val) => val,
             Err(e) => {
                 eprintln!("Error While Parsing");
                 let e_unmatch = anyhow!("Error: unmatched `}}`");
@@ -301,7 +298,7 @@ impl<'a> Parser<'a> {
                 }
             }
         };
-        Node::new_node_num(num.unwrap())
+        Node::new_node_num(num)
     }
     
 }

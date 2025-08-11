@@ -8,7 +8,7 @@ pub mod ir;
 pub mod gen_x64;
 pub mod reg_alloc;
 
-pub fn error_at(input: &str, pos: usize, e: anyhow::Error) {
+pub fn error_at(input: &str, pos: usize, e: anyhow::Error) -> ! {
     eprintln!("{}", input);
     eprint!("{}", " ".repeat(pos));
     eprint!("^ ");
