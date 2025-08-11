@@ -2,8 +2,8 @@
 
 use clap::Parser as ClapParser;
 
-use no2cc::lexer::{ Tokenizer, TokenStream };
-use no2cc::parser::{ Parser };
+use nonicc::lexer::{ Tokenizer, TokenStream };
+use nonicc::parser::{ Parser };
 
 #[derive(ClapParser, Debug)]
 struct Args {
@@ -30,7 +30,7 @@ fn main() {
     // 全ての文をパースする
     // TODO: 無限ループの可能性がある
     let mut parser = Parser::new(TokenStream::new(tok_vec, input));
-    let mut nodes:Vec<Box<no2cc::types::Node>> = vec![];
+    let mut nodes:Vec<Box<nonicc::types::Node>> = vec![];
     while parser.tokens.idx != parser.tokens.tok_vec.len() - 1  {
         nodes.push(parser.defun());
     }
@@ -45,9 +45,9 @@ fn main() {
     // let stack_size = (((parser.lvars.lvars_vec.len() - 1) * 8 + 15) / 16) * 16;
 
     // 中間表現の生成
-    use no2cc::ir::gen_ir::{ GenIrContext, stmt_to_ir };
-    use no2cc::reg_alloc::{interval_analysis, register_allocation};
-    use no2cc::gen_x64;
+    use nonicc::ir::gen_ir::{ GenIrContext, stmt_to_ir };
+    use nonicc::reg_alloc::{interval_analysis, register_allocation};
+    use nonicc::gen_x64;
     let mut codes = vec![];
     let mut context = GenIrContext::new();
 

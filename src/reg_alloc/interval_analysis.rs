@@ -71,9 +71,9 @@ fn test_scan_adding_interval() {
         TAC::LoadImm { dest: VirtualReg { id: 0 }, value: 1 },
         TAC::LoadImm { dest: VirtualReg { id: 1 }, value: 1 },
         TAC::BinOpCode { dest: VirtualReg { id: 2 }, 
-                         left: crate::ir::types_ir::Operand::Reg(VirtualReg { id: 0 }), 
+                         left: VirtualReg { id: 0 }, 
                          op: crate::ir::types_ir::BinOp::Add, 
-                         right: crate::ir::types_ir::Operand::Reg(VirtualReg { id: 1 })
+                         right: VirtualReg { id: 1 },
                        }
     ];
     

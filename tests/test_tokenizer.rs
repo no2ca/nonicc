@@ -1,5 +1,5 @@
-use no2cc::types::{ Token, TokenKind::* };
-use no2cc::lexer::Tokenizer;
+use nonicc::types::{ Token, TokenKind::* };
+use nonicc::lexer::Tokenizer;
 
 /// トークナイザのテスト
 /// EOFは最後の位置+1
