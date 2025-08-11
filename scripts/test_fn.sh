@@ -6,9 +6,9 @@ assert() {
     expected="$1"
     input="$2"
     if [ "$debug"="true" ]; then
-        ./target/debug/no2cc "$input" -d > tmp.s
+        ./target/debug/nonicc "$input" -d > tmp.s
     else
-        ./target/debug/no2cc "$input" > tmp.s
+        ./target/debug/nonicc "$input" > tmp.s
     fi
     cat tmp.s
     gcc -z noexecstack -o tmp tmp.s

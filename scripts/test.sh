@@ -4,7 +4,7 @@ cargo build
 assert() {
     expected="$1"
     input="$2"
-    ./target/debug/no2cc "main() { $input }" -d > tmp.s
+    ./target/debug/nonicc "main() { $input }" -d > tmp.s
     cat tmp.s
     gcc -z noexecstack -o tmp tmp.s
     ./tmp
