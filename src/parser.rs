@@ -46,6 +46,7 @@ impl<'a> Parser<'a> {
         }
     }
     
+    /// `params = "(" ident, .. ")"`
     fn params(&mut self) -> Vec<Node> {
         self.tokens.expect("(").unwrap_or_else( |e|{
             eprintln!("Error While Parsing");
@@ -80,7 +81,29 @@ impl<'a> Parser<'a> {
         params
     }
     
-    /// defun = ident "(" arg, .. ")" "{" stmt* "}"
+    /// `args = expr, .. ")"`
+    fn args(&mut self) -> Vec<Node> {
+        let mut args = Vec::new();
+        if !self.tokens.consume(")") {
+            loop {
+                let arg = *self.expr();
+                args.push(arg);
+                if self.tokens.consume(",") {
+                    continue;
+                } else {
+                    match self.tokens.expect(")") {
+                        Ok(()) => break,
+                        Err(e) => {
+                            error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                        }
+                    }
+                }
+            }
+        }
+        args
+    }
+    
+    /// defun = ident "(" params ")" "{" stmt* "}"
     pub fn defun(&mut self) -> Box<Node> {
         let fn_name: String = match self.tokens.consume_ident() {
             Some(ident) => ident.str,
@@ -269,7 +292,9 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// `primary = num | ident ("(" ")")? | "(" expr ")" `
+    /// primary = num |
+    ///            ident ( "(" params ")" )? |
+    ///            "(" expr ")" 
     fn primary(&mut self) -> Box<Node> {
         // "(" expr ")"
         if self.tokens.consume("(") {
@@ -284,18 +309,13 @@ impl<'a> Parser<'a> {
             return node;
         }
 
-        // ident ("(" ")")?
+        // ident ( args )?
         if let Some(ident) = self.tokens.consume_ident() {
             // 関数かどうか調べる
+            let args: Vec<Node>;
             if self.tokens.consume("(") {
-                match self.tokens.expect(")") {
-                    Ok(()) => (),
-                    Err(e) => {
-                        eprintln!("Error While Parsing");
-                        error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
-                    }
-                };
-                return Node::new_node_call(ident.str);
+                args = self.args();
+                return Node::new_node_call(ident.str, args);
             }
 
             // ローカル変数が既にあるか調べる

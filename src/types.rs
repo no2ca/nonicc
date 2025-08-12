@@ -66,7 +66,8 @@ pub struct Node {
     pub stmts: Option<Vec<Node>>, // ND_BLOCK, ND_DEFUNのとき
     pub ident_name: Option<String>, // ND_LVARのときの変数名
     pub fn_name: Option<String>,       // ND_CALL, ND_DEFUNのときの関数名
-    pub args: Option<Vec<Node>>, // ND_CALL, ND_DEFUNのとき
+    pub params: Option<Vec<Node>>, // ND_DEFUNのとき
+    pub args: Option<Vec<Node>>, // ND_CALLのとき
 }
 
 impl Node {
@@ -83,6 +84,7 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: None,
+            params: None,
             args: None,
         })
     }
@@ -100,6 +102,7 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: None,
+            params: None,
             args: None,
         })
     }
@@ -117,6 +120,7 @@ impl Node {
             stmts: None,
             ident_name: Some(ident_name),
             fn_name: None,
+            params: None,
             args: None,
         })
     }
@@ -134,6 +138,7 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: None,
+            params: None,
             args: None,
         })
     }
@@ -151,11 +156,12 @@ impl Node {
             stmts: Some(block_stmt),
             ident_name: None,
             fn_name: None,
+            params: None,
             args: None,
         })
     }
     
-    pub fn new_node_call(fn_name: String) -> Box<Node> {
+    pub fn new_node_call(fn_name: String, args: Vec<Node>) -> Box<Node> {
         Box::new(Node {
             kind: NodeKind::ND_CALL,
             lhs: None,
@@ -168,7 +174,8 @@ impl Node {
             stmts: None,
             ident_name: None,
             fn_name: Some(fn_name.to_string()),
-            args: None,
+            params: None,
+            args: Some(args),
         })
     }
     
@@ -185,7 +192,8 @@ impl Node {
             stmts: Some(stmts),
             ident_name: None,
             fn_name: Some(fn_name.to_string()),
-            args: Some(args),
+            params: Some(args),
+            args: None,
         })
     }
 
