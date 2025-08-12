@@ -46,15 +46,15 @@ impl<'a> Parser<'a> {
         }
     }
     
-    fn args(&mut self) -> Vec<Node> {
+    fn params(&mut self) -> Vec<Node> {
         self.tokens.expect("(").unwrap_or_else( |e|{
             eprintln!("Error While Parsing");
             error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
         });
-        let mut args = Vec::new();
+        let mut params = Vec::new();
         if !self.tokens.consume(")") {
             loop {
-                let arg = match self.tokens.consume_ident() {
+                let param = match self.tokens.consume_ident() {
                     // TODO: ここのoffsetの値を使うことがないので適当な値を設定している
                     // TODO: offset使わないことが分かったら消そう
                     Some(t) => *Node::new_node_lvar(9999, t.str),
@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
                         error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                     }
                 };
-                args.push(arg);
+                params.push(param);
                 if self.tokens.consume(",") {
                     continue;
                 } else {
@@ -77,7 +77,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        args
+        params
     }
     
     /// defun = ident "(" arg, .. ")" "{" stmt* "}"
@@ -91,9 +91,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-
-        let args = self.args();
-        eprintln!("[DEBUG] args: {:?}", args);
+        let args = self.params();
 
         self.tokens.expect("{").unwrap_or_else( |e|{
             eprintln!("Error While Parsing");

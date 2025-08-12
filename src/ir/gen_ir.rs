@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::types::{ Node, NodeKind::* };
-use crate::ir::types_ir::{ BinOp, Operand, ThreeAddressCode as TAC, VirtualReg, Label };
+use crate::ir::types_ir::{ BinOp, Operand, ThreeAddressCode as TAC, VirtualReg, Label, Param };
 
 pub struct GenIrContext {
     pub code: Vec<TAC>,
@@ -27,6 +27,7 @@ impl GenIrContext {
     }
     
     /// HashMapを使用して既にレジスタが割り当てられているか調べる
+    /// 既存の割り当てが無かったら新たにレジスタを作る
     fn get_var_reg(&mut self, name: &str) -> VirtualReg {
         if let Some(&reg) = self.lvar_map.get(name) {
             reg
@@ -128,7 +129,16 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
         }
         ND_DEFUN => {
             let fn_name = node.fn_name.clone().unwrap();
-            context.emit(TAC::Fn { fn_name });
+            
+            let args = node.args.as_ref().unwrap();
+            let mut params = Vec::new();
+            for arg in args {
+                let name = arg.ident_name.clone().unwrap();
+                let dest = context.get_var_reg(&name);
+                params.push(Param::new(dest, name));
+            }
+
+            context.emit(TAC::Fn { fn_name, params });
             
             let stmts = node.stmts.as_ref().unwrap();
             for stmt in stmts {
@@ -185,12 +195,10 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
         ND_LVAR => {
             let name = node.ident_name.clone().unwrap();
             let dest_vreg = context.get_var_reg(&name);
-            /*
-            context.emit(TAC::LoadVar { 
+            context.emit(TAC::EvalVar { 
                 dest: dest_vreg, 
                 name
             });
-            */
             dest_vreg
         }
         ND_CALL => {

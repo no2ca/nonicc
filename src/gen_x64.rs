@@ -140,7 +140,7 @@ impl<'a> Generator<'a> {
                 let src_reg = self.operand_to_string(src, vreg_to_reg);
                 println!("  mov {dest_reg}, {src_reg}");
             }
-            TAC::LoadVar { .. } => (),
+            TAC::EvalVar { .. } => (),
             TAC::Return { src } => {
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
                 println!("  mov rax, {}", src_reg);
@@ -168,7 +168,7 @@ impl<'a> Generator<'a> {
                 println!("  call {}", fn_name);
                 println!("  mov {}, rax", ret_val_reg);
             }
-            TAC::Fn { fn_name } => {
+            TAC::Fn { fn_name, params } => {
                 // 最大オフセットを使用してスタックサイズを計算
                 let mut offset_max: usize = 0; 
                 for (_, offset) in self.vreg_to_offset.clone() {
@@ -177,10 +177,20 @@ impl<'a> Generator<'a> {
                     }
                 }
                 let stack_size = ((offset_max + 15) / 16) * 16;
+                
+                // 関数エピローグ
                 println!("{}:", fn_name);
                 println!("  push rbp");
                 println!("  mov rbp, rsp");
                 println!("  sub rsp, {}", stack_size);
+
+                // 引数の受け渡し
+                let param_regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                for (i, param) in params.iter().enumerate() {
+                    let dest = self.vreg_to_string(&param.dest, vreg_to_reg);
+                    let recv = param_regs.get(i).expect("too many args");
+                    println!("  mov {}, {}", dest, recv);
+                }
             }
             // ワイルドカードを使わない
         }

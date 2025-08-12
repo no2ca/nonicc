@@ -30,17 +30,29 @@ pub enum Label {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Param {
+    pub dest: VirtualReg,
+    pub name: String,
+}
+
+impl Param {
+    pub fn new(dest: VirtualReg, name: String) -> Self {
+        Param { dest, name }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },
     Assign { dest: VirtualReg, src: Operand },
-    LoadVar { dest: VirtualReg, name: String }, // TODO: これ必要なの
+    EvalVar { dest: VirtualReg, name: String }, // TODO: これ必要なの
     Return { src: VirtualReg },
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
     GoTo { label: Label },
     Label { label: Label },
     Call { fn_name: String, ret_val: VirtualReg },
-    Fn { fn_name: String },
+    Fn { fn_name: String, params: Vec<Param> },
 }
 
 impl ThreeAddressCode {
@@ -61,7 +73,7 @@ impl ThreeAddressCode {
                 }
                 vregs
             }
-            ThreeAddressCode::LoadVar { dest, .. } => {
+            ThreeAddressCode::EvalVar { dest, .. } => {
                 vec![dest.clone()]
             }
             ThreeAddressCode::Return { src } => {
@@ -79,8 +91,12 @@ impl ThreeAddressCode {
             ThreeAddressCode::Call { ret_val , .. } => {
                 vec![ret_val.clone()]
             }
-            ThreeAddressCode::Fn { .. } => {
-                Vec::new()
+            ThreeAddressCode::Fn { params, .. } => {
+                let mut vregs = Vec::new();
+                for param in params {
+                    vregs.push(param.dest);
+                }
+                vregs
             }
             // 忘れてバグの原因になるためワイルドカードを使わない
         }
