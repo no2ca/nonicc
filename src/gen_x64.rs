@@ -140,6 +140,7 @@ impl<'a> Generator<'a> {
                 let src_reg = self.operand_to_string(src, vreg_to_reg);
                 println!("  mov {dest_reg}, {src_reg}");
             }
+            // EvalVarは仮想レジスタの生存期間を明示的に扱うためなので何も生成しない
             TAC::EvalVar { .. } => (),
             TAC::Return { src } => {
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
@@ -163,9 +164,34 @@ impl<'a> Generator<'a> {
                 let real_label = self.label_to_string(label.clone());
                 println!("{}:", real_label);
             }
-            TAC::Call { fn_name, ret_val } => {
-                let ret_val_reg = self.vreg_to_string(ret_val, vreg_to_reg);
+            TAC::Call { fn_name, args, ret_reg } => {
+                let mut args_reg = Vec::new();
+                for arg in args {
+                    args_reg.push(self.vreg_to_string(arg, vreg_to_reg));
+                }
+
+                // callee-saveに保存する
+                let save = vec!["rbx", "r12", "r13", "r14", "r15"];
+                for (i, reg) in args_reg.iter().enumerate() {
+                    let dest = save.get(i).expect("too many args are given");
+                    println!("  mov {}, {}", dest, reg);
+                }
+                
+                let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                for (i, _) in args_reg.iter().enumerate() {
+                    let r = save.get(i).expect("too many args are given");
+                    let dest = regs.get(i).expect("too many args are given");
+                    println!("  mov {}, {}", dest, r);
+                }
+
                 println!("  call {}", fn_name);
+                
+                for (i, r) in args_reg.iter().enumerate() {
+                    let saved = save.get(i).expect("too many args are given");
+                    println!("  mov {}, {}", r, saved);
+                }
+
+                let ret_val_reg = self.vreg_to_string(ret_reg, vreg_to_reg);
                 println!("  mov {}, rax", ret_val_reg);
             }
             TAC::Fn { fn_name, params } => {
@@ -178,13 +204,14 @@ impl<'a> Generator<'a> {
                 }
                 let stack_size = ((offset_max + 15) / 16) * 16;
                 
-                // 関数エピローグ
+                // 関数プロローグ
                 println!("{}:", fn_name);
                 println!("  push rbp");
                 println!("  mov rbp, rsp");
                 println!("  sub rsp, {}", stack_size);
 
-                // 引数の受け渡し
+                // 引数の受け渡し(Linux)
+                // OSによってルールが異なることに注意
                 let param_regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
                 for (i, param) in params.iter().enumerate() {
                     let dest = self.vreg_to_string(&param.dest, vreg_to_reg);

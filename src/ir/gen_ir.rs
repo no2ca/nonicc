@@ -130,10 +130,9 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
         ND_DEFUN => {
             let fn_name = node.fn_name.clone().unwrap();
             
-            let args = node.args.as_ref().unwrap();
             let mut params = Vec::new();
-            for arg in args {
-                let name = arg.ident_name.clone().unwrap();
+            for param in node.params.as_ref().unwrap() {
+                let name = param.ident_name.clone().unwrap();
                 let dest = context.get_var_reg(&name);
                 params.push(Param::new(dest, name));
             }
@@ -203,9 +202,13 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
         }
         ND_CALL => {
             let fn_name = node.fn_name.clone().unwrap();
-            let ret_val = VirtualReg::new(context.get_register_count());
-            context.emit(TAC::Call { fn_name, ret_val });
-            ret_val
+            let mut args = Vec::new();
+            for arg in node.args.clone().unwrap() {
+                args.push(expr_to_ir(&arg, context));
+            }
+            let ret_reg = VirtualReg::new(context.get_register_count());
+            context.emit(TAC::Call { fn_name, args, ret_reg });
+            ret_reg
         }
         _ => unreachable!("{:?}", node.kind),
     }

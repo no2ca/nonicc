@@ -179,7 +179,7 @@ impl Node {
         })
     }
     
-    pub fn new_node_defun(fn_name: String, stmts: Vec<Node>, args: Vec<Node>) -> Box<Node> {
+    pub fn new_node_defun(fn_name: String, stmts: Vec<Node>, params: Vec<Node>) -> Box<Node> {
         Box::new(Node {
             kind: NodeKind::ND_DEFUN,
             lhs: None,
@@ -192,7 +192,7 @@ impl Node {
             stmts: Some(stmts),
             ident_name: None,
             fn_name: Some(fn_name.to_string()),
-            params: Some(args),
+            params: Some(params),
             args: None,
         })
     }

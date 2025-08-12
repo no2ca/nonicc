@@ -46,12 +46,12 @@ pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },
     Assign { dest: VirtualReg, src: Operand },
-    EvalVar { dest: VirtualReg, name: String }, // TODO: これ必要なの
+    EvalVar { dest: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
     Return { src: VirtualReg },
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
     GoTo { label: Label },
     Label { label: Label },
-    Call { fn_name: String, ret_val: VirtualReg },
+    Call { fn_name: String, args: Vec<VirtualReg>, ret_reg: VirtualReg },
     Fn { fn_name: String, params: Vec<Param> },
 }
 
@@ -88,8 +88,12 @@ impl ThreeAddressCode {
             ThreeAddressCode::Label { .. } => {
                 Vec::new()
             }
-            ThreeAddressCode::Call { ret_val , .. } => {
-                vec![ret_val.clone()]
+            ThreeAddressCode::Call { ret_reg: ret_val , args, .. } => {
+                let mut vregs = vec![ret_val.clone()];
+                for r in args {
+                    vregs.push(r.clone());
+                }
+                vregs
             }
             ThreeAddressCode::Fn { params, .. } => {
                 let mut vregs = Vec::new();

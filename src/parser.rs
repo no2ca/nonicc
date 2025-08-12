@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
             self.defined_fn.push(fn_name.clone());
         }
 
-        let args = self.params();
+        let params = self.params();
 
         self.tokens.expect("{").unwrap_or_else( |e|{
             eprintln!("Error While Parsing");
@@ -136,7 +136,7 @@ impl<'a> Parser<'a> {
             stmts.push(*self.stmt());
         }
         
-        Node::new_node_defun(fn_name, stmts, args)
+        Node::new_node_defun(fn_name, stmts, params)
 
     }
     
