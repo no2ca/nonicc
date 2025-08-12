@@ -46,6 +46,30 @@ main() {
 }
 "
 
+assert 3 "
+foo(a, b) {
+    return a + b;
+}
+
+main() {
+    return foo(1, 2);
+}
+"
+
+assert 36 "
+bar(a) {
+    return a + a;
+}
+
+foo(a) {
+    return bar(a) * bar(a);
+}
+
+main() {
+    return foo(3);
+}
+"
+
 rm -f tmp*
 
 echo OK
