@@ -36,6 +36,7 @@ impl Lvars {
 pub struct Parser<'a> {
     pub tokens: TokenStream<'a>,
     pub lvars: Lvars,
+    defined_fn: Vec<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -43,6 +44,7 @@ impl<'a> Parser<'a> {
         Parser {
             tokens,
             lvars: Lvars::new(),
+            defined_fn: Vec::new(),
         }
     }
     
@@ -113,6 +115,14 @@ impl<'a> Parser<'a> {
                 error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
             }
         };
+
+        if self.defined_fn.contains(&fn_name) {
+            eprintln!("Error While Parsing");
+            let e = anyhow!("関数が重複して定義されています");
+            error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+        } else {
+            self.defined_fn.push(fn_name.clone());
+        }
 
         let args = self.params();
 
@@ -314,6 +324,11 @@ impl<'a> Parser<'a> {
             // 関数かどうか調べる
             let args: Vec<Node>;
             if self.tokens.consume("(") {
+                // 定義済みか調べる
+                if !self.defined_fn.contains(&ident.str) {
+                    let e = anyhow!("定義されていない関数を呼び出しています");
+                    error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+                }
                 args = self.args();
                 return Node::new_node_call(ident.str, args);
             }
