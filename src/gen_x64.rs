@@ -123,13 +123,21 @@ impl<'a> Generator<'a> {
                         }
                     }
                     BinOp::Div => {
+                        let tmp = "rbx";
+                        println!("  mov {}, rdx", tmp);
+
                         // raxの値が割られる数
                         println!("  mov rax, {}", left_reg);
                         // raxを128bitに拡張してこれだけ使う
                         println!("  cqo");
-                        println!("  idiv {}", right_reg);
+                        if right_reg == "rdx".to_string() {
+                            println!("  idiv {}", tmp);
+                        } else {
+                            println!("  idiv {}", right_reg);
+                        }
                         // raxの値が商になる
                         println!("  mov {}, rax", dest_reg);
+                        println!("  mov rdx, {}", tmp);
                     }
                     BinOp::Le => {
                         println!("  cmp {}, {}", left_reg, right_reg);
