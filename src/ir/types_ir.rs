@@ -11,13 +11,13 @@ impl VirtualReg {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Operand {
     Reg(VirtualReg),    // 仮想レジスタ名
     Imm(i32),           // 即値 (TODO: この桁数も要検討)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum BinOp {
     Add, Sub, Mul, Div,
     Le, Lt, Eq, Ne,
@@ -29,7 +29,7 @@ pub enum Label {
     Lend(usize),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Param {
     pub dest: VirtualReg,
     pub name: String,
@@ -41,7 +41,7 @@ impl Param {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },

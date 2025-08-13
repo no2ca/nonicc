@@ -3,14 +3,14 @@ use crate::ir::types_ir::{BinOp, Label, Operand, ThreeAddressCode as TAC, Virtua
 
 pub struct Generator<'a> {
     regs: Vec<&'a str>,
-    codes: Vec<TAC>,
+    code: Vec<TAC>,
     pub vreg_to_offset: HashMap<VirtualReg, usize>,
 }
 
 impl<'a> Generator<'a> {
     /// ここで <変数名:仮想レジスタ> のHashMapを <仮想レジスタ:オフセット> のHashMapに昇順で変換
     /// TODO: 責務を分離して単体テストやる
-    pub fn new(regs: Vec<&'a str>, codes: Vec<TAC>, lvar_map: HashMap<String, VirtualReg>) -> Generator<'a> {
+    pub fn new(regs: Vec<&'a str>, code: Vec<TAC>, lvar_map: HashMap<String, VirtualReg>) -> Generator<'a> {
         // 変数名:仮想レジスタのHashMapを受け取る
         let mut vec = Vec::new();
         for x in lvar_map {
@@ -30,14 +30,14 @@ impl<'a> Generator<'a> {
 
         Generator {
             regs,
-            codes,
+            code,
             vreg_to_offset: map,
         }
     }
     
     /// アセンブリ生成はここから
     pub fn gen_all(&self, vreg_to_reg: &HashMap<VirtualReg, usize>) {
-        for instr in &self.codes {
+        for instr in &self.code {
             self.generate(&vreg_to_reg, instr);
         }
     }
@@ -82,54 +82,72 @@ impl<'a> Generator<'a> {
                 println!("  mov {}, {}", self.regs[dest_reg_idx], value);            
             }
             TAC::BinOpCode { dest, left, op, right } => {
-                let left_operand = self.vreg_to_string(left, vreg_to_reg);
-                let right_operand = self.vreg_to_string(right, vreg_to_reg);
+                let left_reg = self.vreg_to_string(left, vreg_to_reg);
+                let right_reg = self.vreg_to_string(right, vreg_to_reg);
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 match op {
                     BinOp::Add => {
-                        println!("  add {}, {}", left_operand, right_operand);
-                        if dest_reg != left_operand {
-                            println!("  mov {}, {}", dest_reg, left_operand);
+                        if dest_reg == right_reg {
+                            // TODO: これは壊れないんですか？
+                            let tmp = "rbx";
+                            println!("  mov {}, {}", tmp, left_reg);
+                            println!("  add {}, {}", tmp, right_reg);
+                            println!("  mov {}, {}", dest_reg, tmp);
+                        } else {
+                            println!("  mov {}, {}", dest_reg, left_reg);
+                            println!("  add {}, {}", dest_reg, right_reg);
                         }
                     }
                     BinOp::Sub => {
-                        println!("  sub {}, {}", left_operand, right_operand);
-                        if dest_reg != left_operand {
-                            println!("  mov {}, {}", dest_reg, left_operand);
+                        if dest_reg == right_reg {
+                            // TODO: これは壊れないんですか？
+                            let tmp = "rbx";
+                            println!("  mov {}, {}", tmp, left_reg);
+                            println!("  sub {}, {}", tmp, right_reg);
+                            println!("  mov {}, {}", dest_reg, tmp);
+                        } else {
+                            println!("  mov {}, {}", dest_reg, left_reg);
+                            println!("  sub {}, {}", dest_reg, right_reg);
                         }
                     }
                     BinOp::Mul => {
-                        println!("  imul {}, {}", left_operand, right_operand);
-                        if dest_reg != left_operand {
-                            println!("  mov {}, {}", dest_reg, left_operand);
+                        if dest_reg == right_reg {
+                            // TODO: これは壊れないんですか？
+                            let tmp = "rbx";
+                            println!("  mov {}, {}", tmp, left_reg);
+                            println!("  imul {}, {}", tmp, right_reg);
+                            println!("  mov {}, {}", dest_reg, tmp);
+                        } else {
+                            println!("  mov {}, {}", dest_reg, left_reg);
+                            println!("  imul {}, {}", dest_reg, right_reg);
                         }
                     }
                     BinOp::Div => {
                         // raxの値が割られる数
-                        println!("  mov rax, {}", left_operand);
+                        println!("  mov rax, {}", left_reg);
                         // raxを128bitに拡張してこれだけ使う
                         println!("  cqo");
-                        println!("  idiv {}", right_operand);
+                        println!("  idiv {}", right_reg);
                         // raxの値が商になる
                         println!("  mov {}, rax", dest_reg);
                     }
                     BinOp::Le => {
-                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  cmp {}, {}", left_reg, right_reg);
                         println!("  setle al");
                         println!("  movzb {}, al", dest_reg);
                     }
                     BinOp::Lt => {
-                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  cmp {}, {}", left_reg, right_reg);
                         println!("  setl al");
                         println!("  movzb {}, al", dest_reg);
                     }
                     BinOp::Eq => {
-                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  cmp {}, {}", left_reg, right_reg);
                         println!("  sete al");
                         println!("  movzb {}, al", dest_reg);
                     }
                     BinOp::Ne => {
-                        println!("  cmp {}, {}", left_operand, right_operand);
+                        println!("  cmp {}, {}", left_reg, right_reg);
                         println!("  setne al");
                         println!("  movzb {}, al", dest_reg);
                     }
@@ -170,25 +188,32 @@ impl<'a> Generator<'a> {
                     args_reg.push(self.vreg_to_string(arg, vreg_to_reg));
                 }
 
-                // callee-saveに保存する
+                /*
+                for arg in &args_reg {
+                    println!("  push {}", arg);
+                }
+                */
+                
                 let save = vec!["rbx", "r12", "r13", "r14", "r15"];
-                for (i, reg) in args_reg.iter().enumerate() {
-                    let dest = save.get(i).expect("too many args are given");
-                    println!("  mov {}, {}", dest, reg);
+                let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                for r in &regs {
+                    println!("  push {}", r);
+                }
+                for (i, arg) in args_reg.iter().enumerate() {
+                    let s = save.get(i).expect("too many args are given");
+                    println!("  mov {}, {}", s, arg);
                 }
                 
-                let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
-                for (i, _) in args_reg.iter().enumerate() {
-                    let r = save.get(i).expect("too many args are given");
+                for i in 0..args.len() {
                     let dest = regs.get(i).expect("too many args are given");
-                    println!("  mov {}, {}", dest, r);
+                    let s = save.get(i).expect("too many args are given");
+                    println!("  mov {}, {}", dest, s);
                 }
 
                 println!("  call {}", fn_name);
                 
-                for (i, r) in args_reg.iter().enumerate() {
-                    let saved = save.get(i).expect("too many args are given");
-                    println!("  mov {}, {}", r, saved);
+                for r in regs.iter().rev() {
+                    println!("  pop {}", r);
                 }
 
                 let ret_val_reg = self.vreg_to_string(ret_reg, vreg_to_reg);
@@ -212,11 +237,16 @@ impl<'a> Generator<'a> {
 
                 // 引数の受け渡し(Linux)
                 // OSによってルールが異なることに注意
+                // 代入前に値が壊れてしまうことがあるためスタックに一時保存
+                // Maybe: callee-saveに一時保存する手がある
+                // let save = vec!["rbx", "r12", "r13", "r14", "r15"];
                 let param_regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
-                for (i, param) in params.iter().enumerate() {
+                for i in 0..params.len() {
+                    println!("  push {}", param_regs.get(i).expect("too many args"));
+                }
+                for param in params.iter().rev() {
                     let dest = self.vreg_to_string(&param.dest, vreg_to_reg);
-                    let recv = param_regs.get(i).expect("too many args");
-                    println!("  mov {}, {}", dest, recv);
+                    println!("  pop {}", dest);
                 }
             }
             // ワイルドカードを使わない

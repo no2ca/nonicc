@@ -18,19 +18,19 @@ impl Interval {
 /// 生存区間を記録する
 /// - 先頭から見て初めて出現した位置がstart
 /// - 後方から見て初めて出現した位置がend
-pub fn scan_interval(codes: &Vec<TAC>) -> Vec<Interval> {
+pub fn scan_interval(code: &Vec<TAC>) -> Vec<Interval> {
     let mut start = HashMap::new();
     let mut end = HashMap::new();
 
     // 先頭から見てレジスタ名と位置を記録
-    for (i, tac) in codes.iter().enumerate() {
+    for (i, tac) in code.iter().enumerate() {
         // 命令から使用しているレジスタを取得
         for reg in tac.get_using_regs() {
             start.entry(reg).or_insert(i);
         }
     }
 
-    for (i, tac) in codes.iter().enumerate().rev() {
+    for (i, tac) in code.iter().enumerate().rev() {
         // 命令から使用しているレジスタを取得
         for reg in tac.get_using_regs() {
             end.entry(reg).or_insert(i);

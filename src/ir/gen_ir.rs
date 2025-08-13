@@ -3,11 +3,12 @@ use std::collections::HashMap;
 use crate::types::{ Node, NodeKind::* };
 use crate::ir::types_ir::{ BinOp, Operand, ThreeAddressCode as TAC, VirtualReg, Label, Param };
 
+#[derive(Clone)]
 pub struct GenIrContext {
     pub code: Vec<TAC>,
     register_count: usize,
     label_count: usize,
-    pub lvar_map: HashMap<String, VirtualReg>,
+    lvar_map: HashMap<String, VirtualReg>,
 }
 
 impl GenIrContext {
@@ -18,6 +19,10 @@ impl GenIrContext {
             label_count: 0,
             lvar_map: HashMap::new(),
         }
+    }
+    
+    pub fn get_lvar_map(&self) -> HashMap<String, VirtualReg> {
+        self.lvar_map.clone()
     }
 
     fn get_register_count(&mut self) -> usize {
