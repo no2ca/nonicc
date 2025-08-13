@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::ir::types_ir::{BinOp, Label, Operand, ThreeAddressCode as TAC, VirtualReg};
+use crate::ir::types_ir::{BinOp, Label, ThreeAddressCode as TAC, VirtualReg};
 
 pub struct Generator<'a> {
     regs: Vec<&'a str>,
@@ -39,19 +39,6 @@ impl<'a> Generator<'a> {
     pub fn gen_all(&self, vreg_to_reg: &HashMap<VirtualReg, usize>) {
         for instr in &self.code {
             self.generate(&vreg_to_reg, instr);
-        }
-    }
-    
-    fn operand_to_string(&self, operand: &Operand, vreg_to_reg: &HashMap<VirtualReg, usize>) -> String {
-        match operand {
-            Operand::Imm(val) => format!("{}", val),
-            Operand::Reg(vreg) => {
-                let msg = format!("Missing vreg key '{:?}' in 'vreg_to_reg'", vreg);
-                let reg_idx = vreg_to_reg.get(vreg).expect(&msg).clone();
-
-                let msg = format!("vreg_to_reg returned '{:?}' which is out of range", reg_idx);
-                self.regs.get(reg_idx).expect(&msg).to_string()
-            }
         }
     }
     
@@ -163,7 +150,7 @@ impl<'a> Generator<'a> {
             }
             TAC::Assign { dest, src } => {
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
-                let src_reg = self.operand_to_string(src, vreg_to_reg);
+                let src_reg = self.vreg_to_string(src, vreg_to_reg);
                 println!("  mov {dest_reg}, {src_reg}");
             }
             // EvalVarは仮想レジスタの生存期間を明示的に扱うためなので何も生成しない
@@ -196,12 +183,6 @@ impl<'a> Generator<'a> {
                     args_reg.push(self.vreg_to_string(arg, vreg_to_reg));
                 }
 
-                /*
-                for arg in &args_reg {
-                    println!("  push {}", arg);
-                }
-                */
-                
                 let save = vec!["rbx", "r12", "r13", "r14", "r15"];
                 let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
                 for r in &regs {

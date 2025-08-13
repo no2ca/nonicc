@@ -12,12 +12,6 @@ impl VirtualReg {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Operand {
-    Reg(VirtualReg),    // 仮想レジスタ名
-    Imm(i32),           // 即値 (TODO: この桁数も要検討)
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub enum BinOp {
     Add, Sub, Mul, Div,
     Le, Lt, Eq, Ne,
@@ -45,7 +39,7 @@ impl Param {
 pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },
-    Assign { dest: VirtualReg, src: Operand },
+    Assign { dest: VirtualReg, src: VirtualReg },
     EvalVar { dest: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
     Return { src: VirtualReg },
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
@@ -66,12 +60,7 @@ impl ThreeAddressCode {
                 vec![dest.clone(), left.clone(), right.clone()]
             }
             ThreeAddressCode::Assign { dest, src } => {
-                let mut vregs = vec![dest.clone()];
-                match src {
-                    Operand::Reg(vreg) => vregs.push(vreg.clone()),
-                    _ => ()
-                }
-                vregs
+                vec![dest.clone(), src.clone()]
             }
             ThreeAddressCode::EvalVar { dest, .. } => {
                 vec![dest.clone()]

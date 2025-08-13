@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::types::{ Node, NodeKind::* };
-use crate::ir::types_ir::{ BinOp, Operand, ThreeAddressCode as TAC, VirtualReg, Label, Param };
+use crate::ir::types_ir::{ BinOp, ThreeAddressCode as TAC, VirtualReg, Label, Param };
 
 #[derive(Clone)]
 pub struct GenIrContext {
@@ -64,19 +64,12 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
             let rhs = node.rhs.as_ref().unwrap();
             
             let left_vreg = expr_to_ir(&lhs, context);
-
-            // ここは即値を代入するだけなので大丈夫
-            let right_operand = if rhs.kind == ND_NUM {
-                Operand::Imm(rhs.val.unwrap())
-            } else {
-                Operand::Reg(expr_to_ir(&rhs, context))
-            };
-
+            let right_vreg = expr_to_ir(&rhs, context);
             let dest_vreg = left_vreg;
 
             context.emit(TAC::Assign { 
                 dest: dest_vreg, 
-                src: right_operand 
+                src: right_vreg 
             });
         }
         ND_RETURN => {
