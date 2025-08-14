@@ -2,7 +2,7 @@ use std::usize;
 
 use anyhow::anyhow;
 
-use crate::types::{ TokenKind, Token };
+use crate::types::{ Token, TokenKind::{self, *} };
 use crate::error_at;
 
 pub struct Tokenizer<'a> {
@@ -63,11 +63,23 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
             
+            // whileをトークナイズする
+            // 次の文字も調べる必要がある
+            let len_while = "while".len();
+            if self.input.get(self.pos..).unwrap().starts_with("while") && !self.is_alnum(self.pos + len_while) {
+                let next = Token::new(TK_WHILE, String::from("while"), len_while, self.pos);
+                self.pos += len_while;
+                
+                tok_vec.push(next);
+                
+                continue;
+            }
+            
             // returnをトークナイズする
             // 次の文字も調べる必要がある
             let len_return = "return".len();
             if self.input.get(self.pos..).unwrap().starts_with("return") && !self.is_alnum(self.pos + len_return) {
-                let next = Token::new(TokenKind::TK_RETURN, "return".to_string(), len_return, self.pos);
+                let next = Token::new(TK_RETURN, "return".to_string(), len_return, self.pos);
                 self.pos += len_return;
                 
                 tok_vec.push(next);
@@ -79,7 +91,7 @@ impl<'a> Tokenizer<'a> {
             // 次の文字も調べる必要がある
             let len_if = "if".len();
             if self.input.get(self.pos..).unwrap().starts_with("if") && !self.is_alnum(self.pos + len_if) {
-                let next = Token::new(TokenKind::TK_IF, "if".to_string(), len_if, self.pos);
+                let next = Token::new(TK_IF, "if".to_string(), len_if, self.pos);
                 self.pos += len_if;
                 
                 tok_vec.push(next);
@@ -91,7 +103,7 @@ impl<'a> Tokenizer<'a> {
             // 次の文字も調べる必要がある
             let len_else = "else".len();
             if self.input.get(self.pos..).unwrap().starts_with("else") && !self.is_alnum(self.pos + len_else) {
-                let next = Token::new(TokenKind::TK_ELSE, "else".to_string(), len_else, self.pos);
+                let next = Token::new(TK_ELSE, "else".to_string(), len_else, self.pos);
                 self.pos += len_else;
                 
                 tok_vec.push(next);
@@ -103,7 +115,7 @@ impl<'a> Tokenizer<'a> {
             let patterns_len_2 = ["<=", ">=", "==", "!="];
             if let Some(pat) = self.starts_with_in(&patterns_len_2) {
                 // posは先頭を保存したいので先にTokenを作る
-                let next = Token::new(TokenKind::TK_RESERVED, pat.to_string(), 2, self.pos);
+                let next = Token::new(TK_RESERVED, pat.to_string(), 2, self.pos);
                 self.pos += 2;
 
                 tok_vec.push(next);
@@ -115,7 +127,7 @@ impl<'a> Tokenizer<'a> {
             let patterns_1 = ["+", "-", "*", "/", "(", ")", ";", "<", ">", "=", "{", "}", ","];
             if let Some(pat) = self.starts_with_in(&patterns_1) {
                 // posは先頭を保存したいので先にTokenを作る
-                let next = Token::new(TokenKind::TK_RESERVED, pat.to_string(), 1, self.pos);
+                let next = Token::new(TK_RESERVED, pat.to_string(), 1, self.pos);
                 self.pos += 1;
 
                 tok_vec.push(next);
@@ -137,7 +149,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
-                let mut next = Token::new(TokenKind::TK_NUM, number.clone(), number.len(), head_pos);
+                let mut next = Token::new(TK_NUM, number.clone(), number.len(), head_pos);
                 // 数字を設定する
                 next.val = Some(number.parse::<i32>().unwrap());
 
@@ -160,7 +172,7 @@ impl<'a> Tokenizer<'a> {
                 }
 
                 let len = ident.len();
-                let next = Token::new(TokenKind::TK_IDENT, ident, len, head_pos);
+                let next = Token::new(TK_IDENT, ident, len, head_pos);
                 
                 tok_vec.push(next);
                 
@@ -175,7 +187,7 @@ impl<'a> Tokenizer<'a> {
             };
         }
 
-        let eof = Token::new(TokenKind::TK_EOF, String::from("<EOF>"), 1, self.pos);
+        let eof = Token::new(TK_EOF, String::from("<EOF>"), 1, self.pos);
         tok_vec.push(eof);
 
         tok_vec
@@ -203,7 +215,7 @@ impl<'a> TokenStream<'a> {
     pub fn consume(&mut self, op: &str) -> bool {
         let tok = self.tok_vec.get(self.idx).unwrap();
         let len = op.len();
-        if tok.kind != TokenKind::TK_RESERVED || 
+        if tok.kind != TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
            tok.len != len {
             false
@@ -227,7 +239,7 @@ impl<'a> TokenStream<'a> {
     pub fn consume_ident(&mut self) -> Option<Token> {
         // ここで呼び出しているメソッドはクローンを返すため
         let tok = self.get_current_token();
-        if tok.kind != TokenKind::TK_IDENT {
+        if tok.kind != TK_IDENT {
             None
         } else {
             self.idx += 1;
@@ -238,7 +250,7 @@ impl<'a> TokenStream<'a> {
     pub fn expect(&mut self, op: &str) -> anyhow::Result<()> {
         let tok = self.tok_vec.get(self.idx).unwrap();
         let len = op.len();
-        if tok.kind != TokenKind::TK_RESERVED || 
+        if tok.kind != TK_RESERVED || 
            tok.str.get(..len) != Some(op) || 
            tok.len != len {
             if op == ";" {
@@ -254,7 +266,7 @@ impl<'a> TokenStream<'a> {
 
     pub fn expect_number(&mut self) -> anyhow::Result<i32> {
         let tok = self.tok_vec.get(self.idx).unwrap();
-        if tok.kind != TokenKind::TK_NUM {
+        if tok.kind != TK_NUM {
             Err(anyhow!("Error: ここは直前に数字が必要です"))
         } else {
             match tok.val {

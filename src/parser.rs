@@ -141,9 +141,10 @@ impl<'a> Parser<'a> {
     }
     
     /// stmt = expr ";" | 
-    ///        "return" expr ";" |
+    ///        "while" "(" expr ")" stmt |
     ///        "if"  "(" expr ")" stmt ("else" stmt)? |
     ///        "{" stmt* "}"
+    ///        "return" expr ";" |
     fn stmt(&mut self) -> Box<Node> {
 
         // if文をパース
