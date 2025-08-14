@@ -132,3 +132,29 @@ fn tokenize_ident_with_num() {
     
     assert_eq!(tokens, expected);
 }
+
+#[test]
+fn tokenize_while() {
+    let mut tokinizer = Tokenizer::new(" while; ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_WHILE, val: None, str: "while".to_string(), len: 5, pos: 1 }, 
+        Token { kind: TK_RESERVED, val: None, str: ";".to_string(), len: 1, pos: 6 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 8 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
+
+#[test]
+fn tokenize_whilex() {
+    let mut tokinizer = Tokenizer::new(" whilex; ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IDENT, val: None, str: "whilex".to_string(), len: 6, pos: 1 }, 
+        Token { kind: TK_RESERVED, val: None, str: ";".to_string(), len: 1, pos: 7 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 9 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
