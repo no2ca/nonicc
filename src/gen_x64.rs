@@ -9,16 +9,15 @@ pub struct Generator<'a> {
 
 impl<'a> Generator<'a> {
     /// ここで <変数名:仮想レジスタ> のHashMapを <仮想レジスタ:オフセット> のHashMapに昇順で変換
-    /// TODO: 責務を分離して単体テストやる
     pub fn new(regs: Vec<&'a str>, code: Vec<TAC>, lvar_map: HashMap<String, VirtualReg>) -> Generator<'a> {
-        // 変数名:仮想レジスタのHashMapを受け取る
+        // 変数名:仮想レジスタのHashMapをVecに受け取る
         let mut vec = Vec::new();
         for x in lvar_map {
             vec.push(x);
         }
 
         // 昇順にする
-        vec.sort_by_key(|i| i.1.id);
+        vec.sort_by_key(|(_, vreg)| vreg.id);
         
         // オフセットを計算
         let mut map = HashMap::new();
@@ -36,7 +35,7 @@ impl<'a> Generator<'a> {
     }
     
     /// アセンブリ生成はここから
-    pub fn gen_all(&self, vreg_to_reg: &HashMap<VirtualReg, usize>) {
+    pub fn gen_fn(&self, vreg_to_reg: HashMap<VirtualReg, usize>) {
         for instr in &self.code {
             self.generate(&vreg_to_reg, instr);
         }
@@ -56,17 +55,17 @@ impl<'a> Generator<'a> {
     /// 仮想レジスタを受け取って実際のレジスタ名をStringで返す
     fn vreg_to_string(&self, vreg: &VirtualReg, vreg_to_reg: &HashMap<VirtualReg, usize>) -> String {
         let msg = format!("Missing vreg key '{:?}' in 'vreg_to_reg'", vreg);
-        let reg_idx = vreg_to_reg.get(vreg).expect(&msg).clone();
+        let reg_idx = vreg_to_reg.get(vreg).expect(&msg);
 
         let msg = format!("vreg_to_reg returned '{:?}' which is out of range", reg_idx);
-        self.regs.get(reg_idx).expect(&msg).to_string()
+        self.regs.get(*reg_idx).expect(&msg).to_string()
     }
     
     fn generate(&self, vreg_to_reg: &HashMap<VirtualReg, usize>, instr: &TAC) {
         match instr {
             TAC::LoadImm { dest, value} => {
-                let dest_reg_idx = vreg_to_reg.get(dest).unwrap().clone();
-                println!("  mov {}, {}", self.regs[dest_reg_idx], value);            
+                let dest_reg_idx = vreg_to_reg.get(dest).unwrap();
+                println!("  mov {}, {}", self.regs[*dest_reg_idx], value);            
             }
             TAC::BinOpCode { dest, left, op, right } => {
                 let left_reg = self.vreg_to_string(left, vreg_to_reg);
@@ -75,7 +74,6 @@ impl<'a> Generator<'a> {
                 match op {
                     BinOp::Add => {
                         if dest_reg == right_reg {
-                            // TODO: これは壊れないんですか？
                             let tmp = "rbx";
                             println!("  mov {}, {}", tmp, left_reg);
                             println!("  add {}, {}", tmp, right_reg);
@@ -87,7 +85,6 @@ impl<'a> Generator<'a> {
                     }
                     BinOp::Sub => {
                         if dest_reg == right_reg {
-                            // TODO: これは壊れないんですか？
                             let tmp = "rbx";
                             println!("  mov {}, {}", tmp, left_reg);
                             println!("  sub {}, {}", tmp, right_reg);
@@ -99,7 +96,6 @@ impl<'a> Generator<'a> {
                     }
                     BinOp::Mul => {
                         if dest_reg == right_reg {
-                            // TODO: これは壊れないんですか？
                             let tmp = "rbx";
                             println!("  mov {}, {}", tmp, left_reg);
                             println!("  imul {}, {}", tmp, right_reg);
@@ -110,6 +106,8 @@ impl<'a> Generator<'a> {
                         }
                     }
                     BinOp::Div => {
+                        // rdxの値を避難させる
+                        // いつでも符号拡張で壊れる可能性があるため常に行う
                         let tmp = "rbx";
                         println!("  mov {}, rdx", tmp);
 
@@ -124,6 +122,8 @@ impl<'a> Generator<'a> {
                         }
                         // raxの値が商になる
                         println!("  mov {}, rax", dest_reg);
+                        
+                        // rdxの値を復活させる
                         println!("  mov rdx, {}", tmp);
                     }
                     BinOp::Le => {
@@ -183,24 +183,35 @@ impl<'a> Generator<'a> {
                     args_reg.push(self.vreg_to_string(arg, vreg_to_reg));
                 }
 
-                let save = vec!["rbx", "r12", "r13", "r14", "r15"];
-                let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                // 現在のレジスタを待避
+                let regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
                 for r in &regs {
                     println!("  push {}", r);
                 }
+
+                // 衝突防止のため一時レジスタに代入する
+                let save = ["rbx", "r12", "r13", "r14", "r15"];
                 for (i, arg) in args_reg.iter().enumerate() {
-                    let s = save.get(i).expect("too many args are given");
-                    println!("  mov {}, {}", s, arg);
+                    if let Some(s) = save.get(i) {
+                        println!("  mov {}, {}", s, arg);
+                    } else {
+                        println!("  push {}", arg);
+                    }
                 }
                 
+                // 一時レジスタを介して引数に渡す
                 for i in 0..args.len() {
                     let dest = regs.get(i).expect("too many args are given");
-                    let s = save.get(i).expect("too many args are given");
-                    println!("  mov {}, {}", dest, s);
+                    if let Some(s) = save.get(i) {
+                        println!("  mov {}, {}", dest, s);
+                    } else {
+                        println!("  pop {}", dest);
+                    }
                 }
 
                 println!("  call {}", fn_name);
                 
+                // レジスタを復活させる
                 for r in regs.iter().rev() {
                     println!("  pop {}", r);
                 }
@@ -227,11 +238,9 @@ impl<'a> Generator<'a> {
                 // 引数の受け渡し(Linux)
                 // OSによってルールが異なることに注意
                 // 代入前に値が壊れてしまうことがあるためスタックに一時保存
-                // Maybe: callee-saveに一時保存する手がある
-                // let save = vec!["rbx", "r12", "r13", "r14", "r15"];
-                let param_regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                let recv_regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
                 for i in 0..params.len() {
-                    println!("  push {}", param_regs.get(i).expect("too many args"));
+                    println!("  push {}", recv_regs.get(i).expect("too many args"));
                 }
                 for param in params.iter().rev() {
                     let dest = self.vreg_to_string(&param.dest, vreg_to_reg);

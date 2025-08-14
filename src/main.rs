@@ -77,7 +77,7 @@ fn main() {
         }
 
         let generator = gen_x64::Generator::new(regs.clone(), code, lvar_map);
-        generator.gen_all(&vreg_to_reg);
+        generator.gen_fn(vreg_to_reg.clone());
 
         if args.debug {
             eprintln!("[DEBUG] vreg_to_offset: {:?}", generator.vreg_to_offset);
