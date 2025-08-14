@@ -3,7 +3,7 @@
 use anyhow::anyhow;
 
 use crate::types::{ Token, Node, NodeKind, LVar };
-use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE };
+use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE, TK_WHILE };
 use crate::lexer::TokenStream;
 use crate::error_at;
 
@@ -146,10 +146,24 @@ impl<'a> Parser<'a> {
     ///        "{" stmt* "}"
     ///        "return" expr ";" |
     fn stmt(&mut self) -> Box<Node> {
+        if self.tokens.consume_keyword(TK_WHILE) {
+            self.tokens.expect("(").unwrap_or_else( |e|{
+                eprintln!("Error While Parsing");
+                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+            });
 
-        // if文をパース
-        if self.tokens.consume_keyword(TK_IF) {
+            let cond = self.expr();
 
+            self.tokens.expect(")").unwrap_or_else( |e|{
+                eprintln!("Error While Parsing");
+                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+            });
+
+            let body = self.stmt();
+            
+            Node::new_node_while(cond, body)
+        } else if self.tokens.consume_keyword(TK_IF) {
+            // if文をパース
             // 条件のパース
             self.tokens.expect("(").unwrap_or_else( |e|{
                 eprintln!("Error While Parsing");

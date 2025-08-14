@@ -47,6 +47,7 @@ pub enum NodeKind {
     ND_ASSIGN,
     ND_LVAR,
     ND_RETURN,
+    ND_WHILE,
     ND_IF,
     ND_ELSE,
     ND_BLOCK,
@@ -62,13 +63,14 @@ pub struct Node {
     pub cond: Option<Box<Node>>,    // if文の条件
     pub then: Option<Box<Node>>,    // if文のthen
     pub els: Option<Box<Node>>,     // if文のelse
+    pub body: Option<Box<Node>>,    // while文のbody
     pub val: Option<i32>,           // ND_NUMのとき
     pub offset: Option<usize>,      // ND_IDENTのとき
-    pub stmts: Option<Vec<Node>>, // ND_BLOCK, ND_DEFUNのとき
+    pub stmts: Option<Vec<Node>>,   // ND_BLOCK, ND_DEFUNのとき
     pub ident_name: Option<String>, // ND_LVARのときの変数名
-    pub fn_name: Option<String>,       // ND_CALL, ND_DEFUNのときの関数名
-    pub params: Option<Vec<Node>>, // ND_DEFUNのとき
-    pub args: Option<Vec<Node>>, // ND_CALLのとき
+    pub fn_name: Option<String>,    // ND_CALL, ND_DEFUNのときの関数名
+    pub params: Option<Vec<Node>>,  // ND_DEFUNのとき
+    pub args: Option<Vec<Node>>,    // ND_CALLのとき
 }
 
 impl Node {
@@ -80,6 +82,7 @@ impl Node {
             cond: None,
             then: None,
             els: None,
+            body: None,
             val: None,
             offset: None,
             stmts: None,
@@ -98,6 +101,7 @@ impl Node {
             cond: None,
             then: None,
             els: None,
+            body: None,
             val: Some(val),
             offset: None,
             stmts: None,
@@ -116,10 +120,30 @@ impl Node {
             cond: None,
             then: None,
             els: None,
+            body: None,
             val: None,
             offset: Some(offset),
             stmts: None,
             ident_name: Some(ident_name),
+            fn_name: None,
+            params: None,
+            args: None,
+        })
+    }
+    
+    pub fn new_node_while(cond:Box<Node>, body: Box<Node>) -> Box<Node> {
+        Box::new(Node {
+            kind: NodeKind::ND_WHILE, 
+            lhs: None, 
+            rhs: None, 
+            cond: Some(cond), 
+            then: None, 
+            els: None, 
+            body: Some(body),
+            val: None, 
+            offset: None, 
+            stmts: None,
+            ident_name: None,
             fn_name: None,
             params: None,
             args: None,
@@ -134,6 +158,7 @@ impl Node {
             cond: Some(cond), 
             then: Some(then), 
             els, 
+            body: None,
             val: None, 
             offset: None, 
             stmts: None,
@@ -152,6 +177,7 @@ impl Node {
             cond: None,
             then: None,
             els: None,
+            body: None,
             val: None,
             offset: None,
             stmts: Some(block_stmt),
@@ -170,6 +196,7 @@ impl Node {
             cond: None,
             then: None,
             els: None,
+            body: None,
             val: None,
             offset: None,
             stmts: None,
@@ -188,6 +215,7 @@ impl Node {
             cond: None,
             then: None,
             els: None,
+            body: None,
             val: None,
             offset: None,
             stmts: Some(stmts),
