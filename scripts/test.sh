@@ -267,6 +267,73 @@ if (a) {
 return x;
 '
 
+assert 55 "
+x = 1; sum = 0;
+while (x <= 10) {
+    sum = sum + x;
+    x = x + 1;
+}
+return sum;
+"
+
+assert 0 "
+x = 11; sum = 0;
+while (x <= 10) {
+    sum = sum + x;
+    x = x + 1;
+}
+return sum;
+"
+
+assert 55 "
+x = 10; sum = 0;
+while (x > 0) {
+    sum = sum + x;
+    x = x - 1;
+}
+return sum;
+"
+
+assert 6 "
+x = 3; sum = 0;
+while (x) {
+    sum = sum + x;
+    x = x - 1;
+}
+return sum;
+"
+
+assert 18 "
+i = 1; sum = 0;
+while (i <= 3) {
+    j = 1;
+    while (j <= 2) {
+        sum = sum + i * j;
+        j = j + 1;
+    }
+    i = i + 1;
+}
+return sum;
+"
+
+assert 15 "
+x = 1; sum = 0;
+while (x * x <= 25) {
+    sum = sum + x;
+    x = x + 1;
+}
+return sum;
+"
+
+assert 8 "
+x = 1; sum = 0;
+while (x <= 10000) {
+    sum = sum + x;
+    x = x + 1;
+}
+return sum;
+"
+
 fi
 
 rm -f tmp*
