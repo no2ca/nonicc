@@ -5,12 +5,12 @@ cargo build
 assert() {
     expected="$1"
     input="$2"
-    if [ "$debug"="true" ]; then
+    if [ "$debug" = "true" ]; then
         ./target/debug/nonicc "$input" -d > tmp.s
+        cat tmp.s
     else
         ./target/debug/nonicc "$input" > tmp.s
     fi
-    cat tmp.s
     gcc -z noexecstack -o tmp tmp.s
     ./tmp
     actual="$?"
@@ -133,6 +133,16 @@ ack(m, n) {
 
 main() {
     return ack(3, 4);
+}
+"
+
+assert 42 "
+sum(a, b, c, d, e, f) {
+    return a + b + c + d + e + f;
+}
+
+main() {
+    return sum(6, 7, 6, 8, 6, 9);
 }
 "
 
