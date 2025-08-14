@@ -2,7 +2,7 @@ test:
 	./scripts/test_fn.sh '$(debug)'
 
 test-in-main:
-	./scripts/test.sh '$(option)'
+	./scripts/test.sh '$(option)' '$(debug)'
 
 run:
 	./scripts/run.sh '$(arg)'
