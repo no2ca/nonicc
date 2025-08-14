@@ -20,6 +20,7 @@ pub enum BinOp {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Label {
     Lelse(usize),
+    Lbegin(usize),
     Lend(usize),
 }
 

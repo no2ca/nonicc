@@ -78,6 +78,25 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
             let src_vreg = expr_to_ir(lhs, context);
             context.emit(TAC::Return { src: src_vreg });
         }
+        ND_WHILE => {
+            // begin:
+            //   if (a == 0)
+            //     goto end;
+            //   <stmt>
+            //   goto begin;
+            // end:
+            let begin = Label::Lbegin(context.get_label_count());
+            context.emit(TAC::Label { label: begin.clone() });
+            // cond(expr)に条件
+            let cond = expr_to_ir(node.cond.as_ref().unwrap(), context);
+            let end = Label::Lend(context.get_label_count());
+            context.emit(TAC::IfFalse { cond, label: end.clone() });
+            // body(stmt)に処理
+            stmt_to_ir(node.body.as_ref().unwrap(), context);
+            context.emit(TAC::GoTo { label: begin });
+            // Lendラベル
+            context.emit(TAC::Label { label: end });
+        }
         ND_IF => {
             let cond_node = node.cond.as_ref().unwrap();
             let cond = expr_to_ir(cond_node, context);

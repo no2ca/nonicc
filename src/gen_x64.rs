@@ -46,6 +46,9 @@ impl<'a> Generator<'a> {
             Label::Lelse(count) => {
                 format!(".Lelse{count}")
             }
+            Label::Lbegin(count) => {
+                format!(".Lbegin{count}")
+            }
             Label::Lend(count) => {
                 format!(".Lend{count}")
             }
