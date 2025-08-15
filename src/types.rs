@@ -4,6 +4,7 @@
 pub enum TokenKind {
     TK_RETURN,   // return
     TK_WHILE,    // while
+    TK_FOR,      // for
     TK_IF,       // if
     TK_ELSE,     // else
     TK_RESERVED, // 記号

@@ -62,6 +62,18 @@ impl<'a> Tokenizer<'a> {
                 self.next();
                 continue;
             }
+
+            // forをトークナイズする
+            // 次の文字も調べる必要がある
+            let len_for = "for".len();
+            if self.input.get(self.pos..).unwrap().starts_with("for") && !self.is_alnum(self.pos + len_for) {
+                let next = Token::new(TK_FOR, String::from("for"), len_for, self.pos);
+                self.pos += len_for;
+                
+                tok_vec.push(next);
+                
+                continue;
+            }
             
             // whileをトークナイズする
             // 次の文字も調べる必要がある
