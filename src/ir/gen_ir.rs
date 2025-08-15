@@ -59,19 +59,6 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
     // stmt_to_irは文を生成するとき
     // expr_to_irは式を生成して値の入ったレジスタを受け取るとき
     match node.kind {
-        ND_ASSIGN => {
-            let lhs = node.lhs.as_ref().unwrap();
-            let rhs = node.rhs.as_ref().unwrap();
-            
-            let left_vreg = expr_to_ir(&lhs, context);
-            let right_vreg = expr_to_ir(&rhs, context);
-            let dest_vreg = left_vreg;
-
-            context.emit(TAC::Assign { 
-                dest: dest_vreg, 
-                src: right_vreg 
-            });
-        }
         ND_RETURN => {
             // lhsにexprが入っている
             let lhs = node.lhs.as_ref().unwrap();
@@ -95,6 +82,33 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
             stmt_to_ir(node.body.as_ref().unwrap(), context);
             context.emit(TAC::GoTo { label: begin });
             // Lendラベル
+            context.emit(TAC::Label { label: end });
+        }
+        ND_FOR => {
+            // // for (init; cond; update) body;
+            // init;
+            // begin:
+            //     if (cond = 0)
+            //         goto end;
+            //     body;
+            //     update;
+            //     goto begin;
+            // end:
+            if let Some(init) = &node.init {
+                expr_to_ir(init, context);
+            }
+            let begin = Label::Lbegin(context.get_label_count());
+            context.emit(TAC::Label { label: begin.clone() });
+            let end = Label::Lend(context.get_label_count());
+            if let Some(_cond) = &node.cond {
+                let cond = expr_to_ir(_cond, context);
+                context.emit(TAC::IfFalse { cond, label: end.clone() });
+            }
+            stmt_to_ir(node.body.as_ref().unwrap(), context);
+            if let Some(update) = &node.update {
+                expr_to_ir(update, context);
+            }
+            context.emit(TAC::GoTo { label: begin });
             context.emit(TAC::Label { label: end });
         }
         ND_IF => {
@@ -170,6 +184,20 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
 
 pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
     match node.kind {
+        ND_ASSIGN => {
+            let lhs = node.lhs.as_ref().unwrap();
+            let rhs = node.rhs.as_ref().unwrap();
+            
+            let left_vreg = expr_to_ir(lhs, context);
+            let right_vreg = expr_to_ir(rhs, context);
+            let dest_vreg = left_vreg;
+
+            context.emit(TAC::Assign { 
+                dest: dest_vreg, 
+                src: right_vreg 
+            });
+            dest_vreg
+        }
         ND_NUM => {
             let val = node.val.unwrap();
             let id = context.get_register_count();
