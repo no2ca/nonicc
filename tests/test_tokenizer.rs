@@ -158,3 +158,29 @@ fn tokenize_whilex() {
     
     assert_eq!(tokens, expected);
 }
+
+#[test]
+fn tokenize_for() {
+    let mut tokinizer = Tokenizer::new(" for; ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_FOR, val: None, str: "for".to_string(), len: 3, pos: 1 }, 
+        Token { kind: TK_RESERVED, val: None, str: ";".to_string(), len: 1, pos: 4 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 6 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
+
+#[test]
+fn tokenize_forx() {
+    let mut tokinizer = Tokenizer::new(" forx; ");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IDENT, val: None, str: "forx".to_string(), len: 4, pos: 1 }, 
+        Token { kind: TK_RESERVED, val: None, str: ";".to_string(), len: 1, pos: 5 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 7 }
+    ];
+    
+    assert_eq!(tokens, expected);
+}
