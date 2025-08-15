@@ -49,6 +49,7 @@ pub enum NodeKind {
     ND_LVAR,
     ND_RETURN,
     ND_WHILE,
+    ND_FOR,
     ND_IF,
     ND_ELSE,
     ND_BLOCK,
@@ -64,7 +65,9 @@ pub struct Node {
     pub cond: Option<Box<Node>>,    // if文の条件
     pub then: Option<Box<Node>>,    // if文のthen
     pub els: Option<Box<Node>>,     // if文のelse
-    pub body: Option<Box<Node>>,    // while文のbody
+    pub body: Option<Box<Node>>,    // while文, for文のbody
+    pub init: Option<Box<Node>>,    // for文の初期化式
+    pub update: Option<Box<Node>>,  // for文の更新式
     pub val: Option<i32>,           // ND_NUMのとき
     pub offset: Option<usize>,      // ND_IDENTのとき
     pub stmts: Option<Vec<Node>>,   // ND_BLOCK, ND_DEFUNのとき
@@ -84,6 +87,8 @@ impl Node {
             then: None,
             els: None,
             body: None,
+            init: None,
+            update: None,
             val: None,
             offset: None,
             stmts: None,
@@ -103,6 +108,8 @@ impl Node {
             then: None,
             els: None,
             body: None,
+            init: None,
+            update: None,
             val: Some(val),
             offset: None,
             stmts: None,
@@ -122,6 +129,8 @@ impl Node {
             then: None,
             els: None,
             body: None,
+            init: None,
+            update: None,
             val: None,
             offset: Some(offset),
             stmts: None,
@@ -141,6 +150,8 @@ impl Node {
             then: None, 
             els: None, 
             body: Some(body),
+            init: None,
+            update: None,
             val: None, 
             offset: None, 
             stmts: None,
@@ -160,6 +171,29 @@ impl Node {
             then: Some(then), 
             els, 
             body: None,
+            init: None,
+            update: None,
+            val: None, 
+            offset: None, 
+            stmts: None,
+            ident_name: None,
+            fn_name: None,
+            params: None,
+            args: None,
+        })
+    }
+
+    pub fn new_node_for(init: Option<Box<Node>>, cond: Option<Box<Node>>, update: Option<Box<Node>>, body: Box<Node>) -> Box<Node> {
+        Box::new(Node { 
+            kind: NodeKind::ND_FOR, 
+            lhs: None, 
+            rhs: None, 
+            cond, 
+            then: None, 
+            els: None, 
+            body: Some(body),
+            init,
+            update,
             val: None, 
             offset: None, 
             stmts: None,
@@ -179,6 +213,8 @@ impl Node {
             then: None,
             els: None,
             body: None,
+            init: None,
+            update: None,
             val: None,
             offset: None,
             stmts: Some(block_stmt),
@@ -198,6 +234,8 @@ impl Node {
             then: None,
             els: None,
             body: None,
+            init: None,
+            update: None,
             val: None,
             offset: None,
             stmts: None,
@@ -217,6 +255,8 @@ impl Node {
             then: None,
             els: None,
             body: None,
+            init: None,
+            update: None,
             val: None,
             offset: None,
             stmts: Some(stmts),

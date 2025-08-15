@@ -3,7 +3,7 @@
 use anyhow::anyhow;
 
 use crate::types::{ Token, Node, NodeKind, LVar };
-use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE, TK_WHILE };
+use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE, TK_WHILE, TK_FOR };
 use crate::lexer::TokenStream;
 use crate::error_at;
 
@@ -143,10 +143,12 @@ impl<'a> Parser<'a> {
     /// stmt = expr ";" | 
     ///        "while" "(" expr ")" stmt |
     ///        "if"  "(" expr ")" stmt ("else" stmt)? |
+    ///        "for" "(" expr? ";" expr? ";" expr? ")" stmt |
     ///        "{" stmt* "}"
     ///        "return" expr ";" |
     fn stmt(&mut self) -> Box<Node> {
         if self.tokens.consume_keyword(TK_WHILE) {
+            // while文をパース
             self.tokens.expect("(").unwrap_or_else( |e|{
                 eprintln!("Error While Parsing");
                 error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
@@ -162,6 +164,54 @@ impl<'a> Parser<'a> {
             let body = self.stmt();
             
             Node::new_node_while(cond, body)
+        } else if self.tokens.consume_keyword(TK_FOR) {
+            // for文をパース
+            self.tokens.expect("(").unwrap_or_else( |e|{
+                eprintln!("Error While Parsing");
+                error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+            });
+            
+            let init = match self.tokens.consume(";") {
+                true => {
+                    None
+                }
+                false => {
+                    let _init = self.expr();
+                    self.tokens.expect(";").unwrap_or_else( |e|{
+                        eprintln!("Error While Parsing");
+                        error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                    });
+                    Some(_init)
+                }
+            };
+            let cond = match self.tokens.consume(";") {
+                true => {
+                    None
+                }
+                false => {
+                    let _cond = self.expr();
+                    self.tokens.expect(";").unwrap_or_else( |e|{
+                        eprintln!("Error While Parsing");
+                        error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                    });
+                    Some(_cond)
+                }
+            };
+            let update = match self.tokens.consume(")") {
+                true => {
+                    None
+                }
+                false => {
+                    let _update = self.expr();
+                    self.tokens.expect(")").unwrap_or_else( |e|{
+                        eprintln!("Error While Parsing");
+                        error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                    });
+                    Some(_update)
+                }
+            };
+            let body = self.stmt();
+            Node::new_node_for(init, cond, update, body)
         } else if self.tokens.consume_keyword(TK_IF) {
             // if文をパース
             // 条件のパース
