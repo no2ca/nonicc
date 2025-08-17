@@ -55,6 +55,8 @@ pub enum NodeKind {
     ND_BLOCK,
     ND_CALL,
     ND_DEFUN,
+    ND_ADDR,
+    ND_DEREF,
 }
 
 #[derive(Debug, Clone)]
