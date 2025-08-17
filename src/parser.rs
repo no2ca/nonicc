@@ -287,7 +287,6 @@ impl<'a> Parser<'a> {
         } else {
             return node;
         }
-        
     }
 
     /// `equiality = relational ( "==" relational | "!=" relational )*`
@@ -356,12 +355,20 @@ impl<'a> Parser<'a> {
         }
     }
     
+    /// unary = "+" primary | 
+    ///         "-" primary |
+    ///         "&" unary |
+    ///         "*" unary
     fn unary(&mut self) -> Box<Node> {
         if self.tokens.consume("+") {
             self.primary()
         } else if self.tokens.consume("-") {
             // 一時的に 0-primary() の形で負の数を表す
             Node::new(NodeKind::ND_SUB, Some(Node::new_node_num(0)), Some(self.primary()))
+        } else if self.tokens.consume("&") {
+            Node::new(NodeKind::ND_ADDR, Some(self.unary()), None)
+        } else if self.tokens.consume("*") {
+            Node::new(NodeKind::ND_DEREF, Some(self.unary()), None)
         } else {
             self.primary()
         }
