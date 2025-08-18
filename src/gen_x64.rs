@@ -286,7 +286,9 @@ impl<'a> Generator<'a> {
                 }
                 for param in params.iter().rev() {
                     let dest = self.vreg_to_string(&param.dest, vreg_to_reg);
+                    let offset = self.get_offset(&param.dest);
                     println!("  pop {}", dest);
+                    println!("  mov [rbp - {}], {}", offset, dest);
                 }
             }
             // ワイルドカードを使わない
