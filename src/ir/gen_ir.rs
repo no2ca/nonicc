@@ -272,7 +272,7 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             addr
         }
         ND_DEREF => {
-            let dest = VirtualReg::new(context.get_label_count());
+            let dest = VirtualReg::new(context.get_register_count());
             let addr = expr_to_ir(node.lhs.as_ref().unwrap(), context);
             context.emit(TAC::LoadVar { dest, addr });
             dest

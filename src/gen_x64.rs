@@ -186,11 +186,18 @@ impl<'a> Generator<'a> {
                 // 参照外し
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
+                // 変数のときは最新の値をロードしてから
+                if let Some(offset) = self.vreg_to_offset.get(addr) {
+                    println!("  mov {}, [rbp - {}]", addr_reg, offset);
+                }
                 println!("  mov {}, [{}]", dest_reg, addr_reg);
             }
             TAC::Store { addr, src } => {
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
+                if let Some(offset) = self.vreg_to_offset.get(addr) {
+                    println!("  mov {}, [rbp - {}]", addr_reg, offset);
+                }
                 println!("  mov [{}], {}", addr_reg, src_reg);
             }
             TAC::Return { src } => {
