@@ -334,18 +334,6 @@ while (x <= 10000) {
 return sum;
 "
 
-fi
-
-# 現在の割り当てアルゴリズムでは
-# コードが正しくても通らないのでスキップ
-# assert 3 "
-# sum = 0;
-# for (x = 3; (x = x - 1) > 0; ) {
-#     sum = sum + x;
-# }
-# return sum;
-# "
-
 assert 55 "
 sum = 0;
 for (x = 1; x <= 10; x = x + 1) {
@@ -386,6 +374,55 @@ for (x = (2 + 3); x < 10; x = x + 2) {
     sum = sum + x;
 }
 return sum;
+"
+
+fi
+
+# 現在の割り当てアルゴリズムでは
+# コードが正しくても通らないのでスキップ
+# assert 3 "
+# sum = 0;
+# for (x = 3; (x = x - 1) > 0; ) {
+#     sum = sum + x;
+# }
+# return sum;
+# "
+
+assert 3 "
+x = 3;
+y = &x;
+return *y;
+"
+
+assert 3 "
+x = 3;
+y = &x;
+z = &y;
+return **z;
+"
+
+assert 3 "
+x = 1;
+y = &x;
+*y = 3;
+return x;
+"
+
+assert 3 "
+x = 1;
+y = 2;
+a = &x;
+b = &y;
+return *a + *b;
+"
+
+assert 30 "
+a = 1; b = 2;
+p = &a;
+*p = 10;
+p = &b;
+*p = 20;
+return a + b;
 "
 
 rm -f tmp*
