@@ -73,8 +73,8 @@ fn ir_function_with_params() {
     let output_ir = context.code;
     let expected = vec![
         Fn { fn_name: "foo".to_string(), params: vec![Param { dest: VirtualReg { id: 0 }, name: "a".to_string() }, Param { dest: VirtualReg { id: 1 }, name: "b".to_string() }] },
-        EvalVar { dest: VirtualReg { id: 0 }, name: "a".to_string() },
-        EvalVar { dest: VirtualReg { id: 1 }, name: "b".to_string() },
+        EvalVar { var: VirtualReg { id: 0 }, name: "a".to_string() },
+        EvalVar { var: VirtualReg { id: 1 }, name: "b".to_string() },
         LoadImm { dest: VirtualReg { id: 2 }, value: 42 },
         Return { src: VirtualReg { id: 2 } },
     ];

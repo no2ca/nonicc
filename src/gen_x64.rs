@@ -64,6 +64,12 @@ impl<'a> Generator<'a> {
         self.regs.get(*reg_idx).expect(&msg).to_string()
     }
     
+    fn get_offset(&self, vreg: &VirtualReg) -> usize {
+        let msg = format!("Missing vreg key '{:?}' in 'vreg_to_offset'", vreg);
+        let offset = self.vreg_to_offset.get(vreg).expect(&msg);
+        *offset
+    }
+    
     fn generate(&self, vreg_to_reg: &HashMap<VirtualReg, usize>, instr: &TAC) {
         match instr {
             TAC::LoadImm { dest, value} => {
@@ -74,6 +80,13 @@ impl<'a> Generator<'a> {
                 let left_reg = self.vreg_to_string(left, vreg_to_reg);
                 let right_reg = self.vreg_to_string(right, vreg_to_reg);
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
+                // 変数のときはレジスタに最新の値をロードする
+                if let Some(offset) = self.vreg_to_offset.get(left) {
+                    println!("  mov {}, [rbp - {}]", left_reg, offset);
+                }
+                if let Some(offset) = self.vreg_to_offset.get(right) {
+                    println!("  mov {}, [rbp - {}]", right_reg, offset);
+                }
                 match op {
                     BinOp::Add => {
                         if dest_reg == right_reg {
@@ -154,12 +167,38 @@ impl<'a> Generator<'a> {
             TAC::Assign { dest, src } => {
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
-                println!("  mov {dest_reg}, {src_reg}");
+                let offset = self.get_offset(dest);
+                println!("  mov {}, {}", dest_reg, src_reg);
+                println!("  mov [rbp - {}], {}", offset, src_reg);
             }
-            // EvalVarは仮想レジスタの生存期間を明示的に扱うためなので何も生成しない
-            TAC::EvalVar { .. } => (),
+            TAC::EvalVar { .. } => {
+                // let offset = self.get_offset(var);
+                // let var_reg = self.vreg_to_string(var, vreg_to_reg);
+                // println!("  mov {}, [rbp - {}]", var_reg, offset);
+            }
+            TAC::AddrOf { addr, var } => {
+                // 参照
+                let offset = self.get_offset(var);
+                let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
+                println!("  lea {}, [rbp - {}]", addr_reg, offset);
+            }
+            TAC::LoadVar { dest, addr } => {
+                // 参照外し
+                let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
+                let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
+                println!("  mov {}, [{}]", dest_reg, addr_reg);
+            }
+            TAC::Store { addr, src } => {
+                let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
+                let src_reg = self.vreg_to_string(src, vreg_to_reg);
+                println!("  mov [{}], {}", addr_reg, src_reg);
+            }
             TAC::Return { src } => {
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
+                // 変数のときはレジスタに最新の値をロードする
+                if let Some(offset) = self.vreg_to_offset.get(src) {
+                    println!("  mov {}, [rbp - {}]", src_reg, offset);
+                }
                 println!("  mov rax, {}", src_reg);
                 // 関数エピローグ
                 println!("  mov rsp, rbp");

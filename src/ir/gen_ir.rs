@@ -188,15 +188,32 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             let lhs = node.lhs.as_ref().unwrap();
             let rhs = node.rhs.as_ref().unwrap();
             
-            let left_vreg = expr_to_ir(lhs, context);
-            let right_vreg = expr_to_ir(rhs, context);
-            let dest_vreg = left_vreg;
+            match lhs.kind {
+                ND_DEREF => {
+                    // TODO: lhs.lhsはあまりきれいではない
+                    let addr = expr_to_ir(lhs.lhs.as_ref().unwrap(), context);
+                    let src = expr_to_ir(rhs, context);
+                    context.emit(TAC::Store { addr, src });
+                    // TODO: *p = v の値は参照か値かどっちになるんだ？
+                    src
+                }
+                ND_LVAR => {
+                    let name = lhs.ident_name.clone().expect("参照の対象が左辺値ではありません");
+                    let dest = context.get_var_reg(&name);
+                    context.emit(TAC::EvalVar { 
+                        var: dest, 
+                        name
+                    });
+                    let right_vreg = expr_to_ir(rhs, context);
 
-            context.emit(TAC::Assign { 
-                dest: dest_vreg, 
-                src: right_vreg 
-            });
-            dest_vreg
+                    context.emit(TAC::Assign { 
+                        dest, 
+                        src: right_vreg 
+                    });
+                    dest
+                }
+                _ => unreachable!("left value got not assingnable node: {:?}", lhs.kind),
+            }
         }
         ND_NUM => {
             let val = node.val.unwrap();
@@ -240,10 +257,25 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             let name = node.ident_name.clone().unwrap();
             let dest_vreg = context.get_var_reg(&name);
             context.emit(TAC::EvalVar { 
-                dest: dest_vreg, 
+                var: dest_vreg, 
                 name
             });
             dest_vreg
+        }
+        ND_ADDR => {
+            // TODO: 型検証を導入するまではpanicする
+            // nameフィールドを埋めているのが変数名であること
+            let name = node.lhs.as_ref().unwrap().ident_name.clone().expect("参照の対象が左辺値ではありません");
+            let var = context.get_var_reg(&name);
+            let addr = VirtualReg::new(context.get_register_count());
+            context.emit(TAC::AddrOf { addr, var });
+            addr
+        }
+        ND_DEREF => {
+            let dest = VirtualReg::new(context.get_label_count());
+            let addr = expr_to_ir(node.lhs.as_ref().unwrap(), context);
+            context.emit(TAC::LoadVar { dest, addr });
+            dest
         }
         ND_CALL => {
             let fn_name = node.fn_name.clone().unwrap();

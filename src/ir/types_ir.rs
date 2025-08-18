@@ -41,7 +41,10 @@ pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },
     Assign { dest: VirtualReg, src: VirtualReg },
-    EvalVar { dest: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
+    EvalVar { var: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
+    AddrOf { addr: VirtualReg, var: VirtualReg }, // 変数のアドレスを取る (&a)
+    LoadVar { dest: VirtualReg, addr: VirtualReg }, // 参照外し (*p)
+    Store { addr: VirtualReg, src: VirtualReg }, // 間接ストア (*p = v)
     Return { src: VirtualReg },
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
     GoTo { label: Label },
@@ -55,22 +58,31 @@ impl ThreeAddressCode {
     pub(crate) fn get_using_regs(&self) -> Vec<VirtualReg> {
         match self {
             ThreeAddressCode::LoadImm { dest, .. } => {
-                vec![dest.clone()]
+                vec![*dest]
             }
             ThreeAddressCode::BinOpCode { dest, left, right ,.. } => {
-                vec![dest.clone(), left.clone(), right.clone()]
+                vec![*dest, *left, *right]
             }
             ThreeAddressCode::Assign { dest, src } => {
-                vec![dest.clone(), src.clone()]
+                vec![*dest, *src]
             }
-            ThreeAddressCode::EvalVar { dest, .. } => {
-                vec![dest.clone()]
+            ThreeAddressCode::EvalVar { var: dest, .. } => {
+                vec![*dest]
+            }
+            ThreeAddressCode::AddrOf { addr, var } => {
+                vec![*addr, *var]
+            }
+            ThreeAddressCode::LoadVar { dest, addr: src } => {
+                vec![*dest, *src]
+            }
+            ThreeAddressCode::Store { addr, src } => {
+                vec![*addr, *src]
             }
             ThreeAddressCode::Return { src } => {
-                vec![src.clone()]
+                vec![*src]
             }
             ThreeAddressCode::IfFalse { cond, .. } => {
-                vec![cond.clone()]
+                vec![*cond]
             }
             ThreeAddressCode::GoTo { .. } => {
                 Vec::new()
@@ -79,9 +91,9 @@ impl ThreeAddressCode {
                 Vec::new()
             }
             ThreeAddressCode::Call { ret_reg: ret_val , args, .. } => {
-                let mut vregs = vec![ret_val.clone()];
+                let mut vregs = vec![*ret_val];
                 for r in args {
-                    vregs.push(r.clone());
+                    vregs.push(*r);
                 }
                 vregs
             }
