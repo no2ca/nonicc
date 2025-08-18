@@ -425,6 +425,25 @@ p = &b;
 return a + b;
 "
 
+assert 3 "
+a = 1;
+p = &a;
+pp = &p;
+ppp = &pp;
+***ppp = 3;
+return a;
+"
+
+assert 30 "
+a = 10;
+p = &a;
+pp = &p;
+*p = 20;
+b = 30;
+*pp = &b;
+return *p;
+"
+
 rm -f tmp*
 
 echo OK
