@@ -97,6 +97,4 @@ fn main() {
             eprintln!("{:?}", vreg_to_reg);
         }
     }
-
-    
 }

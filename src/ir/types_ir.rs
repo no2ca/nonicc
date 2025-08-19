@@ -3,14 +3,6 @@ pub struct VirtualReg{
     pub id: usize,
 }
 
-impl VirtualReg {
-    pub(super) fn new(id: usize) -> VirtualReg {
-        VirtualReg {
-            id,
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum BinOp {
     Add, Sub, Mul, Div,

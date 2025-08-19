@@ -31,10 +31,10 @@ impl GenIrContext {
         self.lvar_map.clone()
     }
 
-    fn get_register_count(&mut self) -> usize {
+    fn get_new_register(&mut self) -> VirtualReg {
         let id = self.register_count;
         self.register_count += 1;
-        id
+        VirtualReg { id }
     }
     
     /// HashMapを使用して既にレジスタが割り当てられているか調べる
@@ -43,8 +43,7 @@ impl GenIrContext {
         if let Some(&reg) = self.lvar_map.get(name) {
             reg
         } else {
-            let id = self.get_register_count();
-            let reg = VirtualReg { id };
+            let reg = self.get_new_register();
             self.lvar_map.insert(name.to_string(), reg);
             reg
         }
@@ -223,8 +222,7 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
         }
         ND_NUM => {
             let val = node.val.unwrap();
-            let id = context.get_register_count();
-            let reg = VirtualReg::new(id);
+            let reg = context.get_new_register();
             context.emit(TAC::LoadImm { dest: reg.clone(), value: val });
             reg
         }
@@ -238,8 +236,7 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             let left_operand = expr_to_ir(&lhs, context);
             let right_operand = expr_to_ir(&rhs, context);
 
-            let id = context.get_register_count();
-            let dest_vreg = VirtualReg::new(id);
+            let dest_vreg = context.get_new_register();
             let op = match node.kind {
                 ND_ADD => BinOp::Add,
                 ND_SUB => BinOp::Sub,
@@ -273,12 +270,12 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             // nameフィールドを埋めているのが変数名であること
             let name = node.lhs.as_ref().unwrap().ident_name.clone().expect("参照の対象が左辺値ではありません");
             let var = context.get_var_reg(&name);
-            let addr = VirtualReg::new(context.get_register_count());
+            let addr = context.get_new_register();
             context.emit(TAC::AddrOf { addr, var });
             addr
         }
         ND_DEREF => {
-            let dest = VirtualReg::new(context.get_register_count());
+            let dest = context.get_new_register();
             let addr = expr_to_ir(node.lhs.as_ref().unwrap(), context);
             context.emit(TAC::LoadVar { dest, addr });
             dest
@@ -289,7 +286,7 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             for arg in node.args.clone().unwrap() {
                 args.push(expr_to_ir(&arg, context));
             }
-            let ret_reg = VirtualReg::new(context.get_register_count());
+            let ret_reg = context.get_new_register();
             context.emit(TAC::Call { fn_name, args, ret_reg });
             ret_reg
         }

@@ -8,7 +8,6 @@ pub struct Generator<'a> {
 }
 
 impl<'a> Generator<'a> {
-    /// ここで <変数名:仮想レジスタ> のHashMapを <仮想レジスタ:オフセット> のHashMapに昇順で変換
     pub fn new(regs: Vec<&'a str>, code: Vec<TAC>, frame: Frame) -> Generator<'a> {
         Generator {
             regs,
