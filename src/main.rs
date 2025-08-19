@@ -1,7 +1,9 @@
 #![allow(non_camel_case_types)]
 
 use clap::Parser as ClapParser;
+use anyhow::anyhow;
 
+use nonicc::error_at;
 use nonicc::lexer::{ Tokenizer, TokenStream };
 use nonicc::parser::{ Parser };
 
@@ -27,12 +29,21 @@ fn main() {
         eprintln!("[DEBUG] tokens: \n{:?}", tok_vec);
     }
 
-    // 全ての文をパースする
-    // TODO: 無限ループの可能性がある
+    // パース
     let mut parser = Parser::new(TokenStream::new(tok_vec, &input));
     let mut nodes = Vec::new();
-    while parser.tokens.idx != parser.tokens.tok_vec.len() - 1  {
+    let mut last_idx = parser.tokens.idx;
+    while !parser.tokens.is_eof()  {
+
         nodes.push(parser.defun());
+
+        if parser.tokens.idx == last_idx {
+            // トークンが進まないときはエラーを出す
+            // 無限ループを避けるため
+            let e = anyhow!("Parser stuck: token index not advancing");
+            error_at(&input, parser.tokens.idx, e)
+        }
+        last_idx = parser.tokens.idx;
     }
 
     if args.debug {

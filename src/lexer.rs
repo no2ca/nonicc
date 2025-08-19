@@ -223,8 +223,12 @@ impl<'a> TokenStream<'a> {
             input,
         }
     }
+    
+    pub fn is_eof(&self) -> bool {
+        self.get_current_token().kind == TK_EOF
+    }
 
-    pub fn consume(&mut self, op: &str) -> bool {
+    pub(crate) fn consume(&mut self, op: &str) -> bool {
         let tok = self.tok_vec.get(self.idx).unwrap();
         let len = op.len();
         if tok.kind != TK_RESERVED || 
@@ -237,7 +241,7 @@ impl<'a> TokenStream<'a> {
         }
     }
     
-    pub fn consume_keyword(&mut self, kind: TokenKind) -> bool {
+    pub(crate) fn consume_keyword(&mut self, kind: TokenKind) -> bool {
         let tok = self.tok_vec.get(self.idx).unwrap();
         if tok.kind != kind {
             false
@@ -248,7 +252,7 @@ impl<'a> TokenStream<'a> {
     }
     
     /// 変数名ならその変数名を返す
-    pub fn consume_ident(&mut self) -> Option<Token> {
+    pub(crate) fn consume_ident(&mut self) -> Option<Token> {
         // ここで呼び出しているメソッドはクローンを返すため
         let tok = self.get_current_token();
         if tok.kind != TK_IDENT {
@@ -259,7 +263,7 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn expect(&mut self, op: &str) -> anyhow::Result<()> {
+    pub(crate) fn expect(&mut self, op: &str) -> anyhow::Result<()> {
         let tok = self.tok_vec.get(self.idx).unwrap();
         let len = op.len();
         if tok.kind != TK_RESERVED || 
@@ -276,7 +280,7 @@ impl<'a> TokenStream<'a> {
         }
     }
 
-    pub fn expect_number(&mut self) -> anyhow::Result<i32> {
+    pub(crate) fn expect_number(&mut self) -> anyhow::Result<i32> {
         let tok = self.tok_vec.get(self.idx).unwrap();
         if tok.kind != TK_NUM {
             Err(anyhow!("Error: ここは直前に数字が必要です"))
@@ -292,7 +296,7 @@ impl<'a> TokenStream<'a> {
     }
     
     /// 現在のトークンを取得する
-    pub fn get_current_token(&self) -> Token {
+    pub(crate) fn get_current_token(&self) -> Token {
         let current_idx = self.idx;
         self.tok_vec[current_idx].clone()
     }
