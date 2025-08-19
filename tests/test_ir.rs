@@ -16,7 +16,7 @@ fn ir_add() {
     let mut context = GenIrContext::new();
     stmt_to_ir(&node, &mut context);
 
-    let output_ir = context.code;
+    let output_ir = context.get_ir_code();
     let expected = vec![
         Fn { fn_name: "main".to_string(), params: Vec::new() }, 
         LoadImm { dest: VirtualReg { id: 0 }, value: 1 }, 
@@ -40,7 +40,7 @@ fn ir_basic_op() {
     let mut context = GenIrContext::new();
     stmt_to_ir(&node, &mut context);
 
-    let output_ir = context.code;
+    let output_ir = context.get_ir_code();
     let expected = vec![
         Fn { fn_name: "main".to_string(), params: Vec::new() }, 
         LoadImm { dest: VirtualReg { id: 0 }, value: 1 }, 
@@ -70,7 +70,7 @@ fn ir_function_with_params() {
     let mut context = GenIrContext::new();
     stmt_to_ir(&node, &mut context);
 
-    let output_ir = context.code;
+    let output_ir = context.get_ir_code();
     let expected = vec![
         Fn { fn_name: "foo".to_string(), params: vec![Param { dest: VirtualReg { id: 0 }, name: "a".to_string() }, Param { dest: VirtualReg { id: 1 }, name: "b".to_string() }] },
         EvalVar { var: VirtualReg { id: 0 }, name: "a".to_string() },

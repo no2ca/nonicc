@@ -4,6 +4,7 @@ use clap::Parser as ClapParser;
 use anyhow::anyhow;
 
 use nonicc::error_at;
+use nonicc::frame::Frame;
 use nonicc::lexer::{ Tokenizer, TokenStream };
 use nonicc::parser::{ Parser };
 
@@ -59,14 +60,16 @@ fn main() {
     use nonicc::ir::gen_ir::{ GenIrContext, stmt_to_ir };
     use nonicc::reg_alloc::{interval_analysis, register_allocation};
     use nonicc::gen_x64;
-    // 各関数について中間表現を生成してレジスタ割り当て
+
     // caller-saved (呼び出し側が保存するレジスタ) だけを使用
     let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
-    let reg_count = regs.len();
+    let regs_count = regs.len();
+
+    // 各関数について中間表現を生成してレジスタ割り当て
     for node in &nodes {
         let mut context = GenIrContext::new();
         stmt_to_ir(node, &mut context);
-        let code = context.clone().code;
+        let code = context.get_ir_code();
         let lvar_map = context.get_lvar_map();
         
         // デバッグ
@@ -79,19 +82,17 @@ fn main() {
 
         // レジスタ割り当て
         let mut intervals = interval_analysis::scan_interval(&code);
-        let vreg_to_reg = register_allocation::linear_reg_alloc(&mut intervals, reg_count);
+        let vreg_to_reg = register_allocation::linear_reg_alloc(&mut intervals, regs_count);
+        
+        // スタックフレームの計算
+        let frame = Frame::from_lvar_map(lvar_map);
 
-        // デバッグ
-        if args.debug {
-            eprintln!("[DEBUG] intervals");
-            eprintln!("{:?}", intervals);
-        }
-
-        let generator = gen_x64::Generator::new(regs.clone(), code, lvar_map);
+        // コード生成
+        let generator = gen_x64::Generator::new(regs.clone(), code, frame);
         generator.gen_fn(vreg_to_reg.clone());
 
         if args.debug {
-            eprintln!("[DEBUG] vreg_to_offset: {:?}", generator.vreg_to_offset);
+            eprintln!("[DEBUG] vreg_to_offset: {:?}", generator.frame.vreg_to_offset);
             eprintln!("[DEBUG] vreg_to_reg");
             eprintln!("{:?}", vreg_to_reg);
         }

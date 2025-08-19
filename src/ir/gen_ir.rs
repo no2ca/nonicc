@@ -5,7 +5,7 @@ use crate::ir::types_ir::{ BinOp, ThreeAddressCode as TAC, VirtualReg, Label, Pa
 
 #[derive(Clone)]
 pub struct GenIrContext {
-    pub code: Vec<TAC>,
+    code: Vec<TAC>,
     register_count: usize,
     label_count: usize,
     lvar_map: HashMap<String, VirtualReg>,
@@ -21,6 +21,12 @@ impl GenIrContext {
         }
     }
     
+    /// 中間表現のコードの入った配列を取得する
+    pub fn get_ir_code(&self) -> Vec<TAC> {
+        self.code.clone()
+    }
+    
+    /// 変数名と仮想レジスタのHashMapを取得する
     pub fn get_lvar_map(&self) -> HashMap<String, VirtualReg> {
         self.lvar_map.clone()
     }

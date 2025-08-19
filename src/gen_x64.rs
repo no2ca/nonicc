@@ -1,36 +1,19 @@
 use std::collections::HashMap;
-use crate::ir::types_ir::{BinOp, Label, ThreeAddressCode as TAC, VirtualReg};
+use crate::{frame::Frame, ir::types_ir::{BinOp, Label, ThreeAddressCode as TAC, VirtualReg}};
 
 pub struct Generator<'a> {
     regs: Vec<&'a str>,
     code: Vec<TAC>,
-    pub vreg_to_offset: HashMap<VirtualReg, usize>,
+    pub frame: Frame,
 }
 
 impl<'a> Generator<'a> {
     /// ここで <変数名:仮想レジスタ> のHashMapを <仮想レジスタ:オフセット> のHashMapに昇順で変換
-    pub fn new(regs: Vec<&'a str>, code: Vec<TAC>, lvar_map: HashMap<String, VirtualReg>) -> Generator<'a> {
-        // 変数名:仮想レジスタのHashMapをVecに受け取る
-        let mut vec = Vec::new();
-        for x in lvar_map {
-            vec.push(x);
-        }
-
-        // 昇順にする
-        vec.sort_by_key(|(_, vreg)| vreg.id);
-        
-        // オフセットを計算
-        let mut map = HashMap::new();
-        let mut offset = 0;
-        for (_, vreg) in vec {
-            map.entry(vreg).or_insert(offset + 8);
-            offset += 8;
-        }
-
+    pub fn new(regs: Vec<&'a str>, code: Vec<TAC>, frame: Frame) -> Generator<'a> {
         Generator {
             regs,
             code,
-            vreg_to_offset: map,
+            frame,
         }
     }
     
@@ -66,7 +49,7 @@ impl<'a> Generator<'a> {
     
     fn get_offset(&self, vreg: &VirtualReg) -> usize {
         let msg = format!("Missing vreg key '{:?}' in 'vreg_to_offset'", vreg);
-        let offset = self.vreg_to_offset.get(vreg).expect(&msg);
+        let offset = self.frame.vreg_to_offset.get(vreg).expect(&msg);
         *offset
     }
     
@@ -81,10 +64,10 @@ impl<'a> Generator<'a> {
                 let right_reg = self.vreg_to_string(right, vreg_to_reg);
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 // 変数のときはレジスタに最新の値をロードする
-                if let Some(offset) = self.vreg_to_offset.get(left) {
+                if let Some(offset) = self.frame.vreg_to_offset.get(left) {
                     println!("  mov {}, [rbp - {}]", left_reg, offset);
                 }
-                if let Some(offset) = self.vreg_to_offset.get(right) {
+                if let Some(offset) = self.frame.vreg_to_offset.get(right) {
                     println!("  mov {}, [rbp - {}]", right_reg, offset);
                 }
                 match op {
@@ -187,7 +170,7 @@ impl<'a> Generator<'a> {
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
                 // 変数のときは最新の値をロードしてから
-                if let Some(offset) = self.vreg_to_offset.get(addr) {
+                if let Some(offset) = self.frame.vreg_to_offset.get(addr) {
                     println!("  mov {}, [rbp - {}]", addr_reg, offset);
                 }
                 println!("  mov {}, [{}]", dest_reg, addr_reg);
@@ -195,7 +178,7 @@ impl<'a> Generator<'a> {
             TAC::Store { addr, src } => {
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
-                if let Some(offset) = self.vreg_to_offset.get(addr) {
+                if let Some(offset) = self.frame.vreg_to_offset.get(addr) {
                     println!("  mov {}, [rbp - {}]", addr_reg, offset);
                 }
                 println!("  mov [{}], {}", addr_reg, src_reg);
@@ -203,7 +186,7 @@ impl<'a> Generator<'a> {
             TAC::Return { src } => {
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
                 // 変数のときはレジスタに最新の値をロードする
-                if let Some(offset) = self.vreg_to_offset.get(src) {
+                if let Some(offset) = self.frame.vreg_to_offset.get(src) {
                     println!("  mov {}, [rbp - {}]", src_reg, offset);
                 }
                 println!("  mov rax, {}", src_reg);
@@ -271,7 +254,7 @@ impl<'a> Generator<'a> {
             TAC::Fn { fn_name, params } => {
                 // 最大オフセットを使用してスタックサイズを計算
                 let mut offset_max: usize = 0; 
-                for (_, offset) in self.vreg_to_offset.clone() {
+                for (_, offset) in self.frame.vreg_to_offset.clone() {
                     if offset > offset_max {
                         offset_max = offset;
                     }

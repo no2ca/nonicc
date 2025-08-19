@@ -5,8 +5,9 @@ pub mod parser;
 pub mod lexer;
 pub mod codegen;
 pub mod ir;
-pub mod gen_x64;
 pub mod reg_alloc;
+pub mod gen_x64;
+pub mod frame;
 
 pub fn error_at(input: &str, pos: usize, e: anyhow::Error) -> ! {
     eprintln!("{}", input);
