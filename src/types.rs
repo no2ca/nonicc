@@ -287,3 +287,57 @@ impl LVar {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum BinOp {
+    Add, Sub, Mul, Div,
+    Le, Lt, Eq, Ne,
+}
+
+#[derive(Debug)]
+pub enum Expr {
+    Num(i32),
+    Var(String),
+    Binary {
+        op: BinOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
+    Assign {
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
+    Call {
+        fn_name: String,
+        args: Vec<Expr>,
+    },
+    Addr (Box<Expr>),
+    Deref (Box<Expr>),
+}
+
+#[derive(Debug)]
+pub enum Stmt {
+    ExprStmt(Expr),
+    Return(Expr),
+    If {
+        cond: Expr,
+        then: Box<Stmt>,
+        els: Option<Box<Stmt>>,
+    },
+    While {
+        cond: Expr,
+        body: Box<Stmt>,
+    },
+    For {
+        init: Option<Box<Expr>>,
+        cond: Option<Box<Expr>>,
+        update: Option<Box<Expr>>,
+        body: Box<Stmt>,
+    },
+    Block(Vec<Stmt>),
+    Fn {
+        fn_name: String,
+        params: Vec<Expr>,
+        body: Vec<Stmt>,
+    },
+}

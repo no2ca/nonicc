@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::types::{ Node, NodeKind::* };
-use crate::ir::types_ir::{ BinOp, ThreeAddressCode as TAC, VirtualReg, Label, Param };
+use crate::types::{ BinOp, Expr, Stmt };
+use crate::ir::types_ir::{ BinOp as IrBinOp, ThreeAddressCode as TAC, VirtualReg, Label, Param };
 
 #[derive(Clone)]
 pub struct GenIrContext {
@@ -64,17 +64,15 @@ impl GenIrContext {
     }
 }
 
-pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
+pub fn stmt_to_ir(stmt: &Stmt, context: &mut GenIrContext) {
     // stmt_to_irは文を生成するとき
     // expr_to_irは式を生成して値の入ったレジスタを受け取るとき
-    match node.kind {
-        ND_RETURN => {
-            // lhsにexprが入っている
-            let lhs = node.lhs.as_ref().unwrap();
-            let src_vreg = expr_to_ir(lhs, context);
-            context.emit(TAC::Return { src: src_vreg });
+    match stmt {
+        Stmt::Return(expr) => {
+            let src = expr_to_ir(expr, context);
+            context.emit(TAC::Return { src });
         }
-        ND_WHILE => {
+        Stmt::While { cond: _cond, body: _body } => {
             // begin:
             //   if (a == 0)
             //     goto end;
@@ -84,16 +82,16 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
             let begin = Label::Lbegin(context.get_label_count());
             context.emit(TAC::Label { label: begin.clone() });
             // cond(expr)に条件
-            let cond = expr_to_ir(node.cond.as_ref().unwrap(), context);
+            let cond = expr_to_ir(_cond, context);
             let end = Label::Lend(context.get_label_count());
             context.emit(TAC::IfFalse { cond, label: end.clone() });
             // body(stmt)に処理
-            stmt_to_ir(node.body.as_ref().unwrap(), context);
+            stmt_to_ir(_body, context);
             context.emit(TAC::GoTo { label: begin });
             // Lendラベル
             context.emit(TAC::Label { label: end });
         }
-        ND_FOR => {
+        Stmt::For { init: _init, cond: _cond, update: _update, body: _body } => {
             // // for (init; cond; update) body;
             // init;
             // begin:
@@ -103,51 +101,56 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
             //     update;
             //     goto begin;
             // end:
-            if let Some(init) = &node.init {
+            
+            // init
+            if let Some(init) = _init {
                 expr_to_ir(init, context);
             }
+            
+            // begin
             let begin = Label::Lbegin(context.get_label_count());
             context.emit(TAC::Label { label: begin.clone() });
+            
+            // 終了判定
             let end = Label::Lend(context.get_label_count());
-            if let Some(_cond) = &node.cond {
+            if let Some(_cond) = _cond {
                 let cond = expr_to_ir(_cond, context);
                 context.emit(TAC::IfFalse { cond, label: end.clone() });
             }
-            stmt_to_ir(node.body.as_ref().unwrap(), context);
-            if let Some(update) = &node.update {
+            
+            // body
+            stmt_to_ir(_body, context);
+            if let Some(update) = _update {
                 expr_to_ir(update, context);
             }
             context.emit(TAC::GoTo { label: begin });
             context.emit(TAC::Label { label: end });
         }
-        ND_IF => {
-            let cond_node = node.cond.as_ref().unwrap();
-            let cond = expr_to_ir(cond_node, context);
-
+        Stmt::If { cond: _cond, then, els: _els } => {
+            //   if (cond == 0)
+            //     goto Lelse;
+            //   then;
+            //   goto Lend;
+            // Lelse:
+            //     els;
+            // Lend:
+            let cond = expr_to_ir(_cond, context);
             // elseがあるとき
-            if let Some(_els) = node.els.as_ref() {
-                // 条件分岐
+            if let Some(els) = _els {
                 let label_else = Label::Lelse(context.get_label_count());
-                
-                // if_false goto .Lelse
                 context.emit(TAC::IfFalse { 
                     cond,
                     label: label_else.clone()
                 });
 
-                // then
-                let then_node = node.then.as_ref().unwrap();                
-                stmt_to_ir(then_node, context);
+                stmt_to_ir(then, context);
                 
-                // goto .Lend
                 let label_end = Label::Lend(context.get_label_count());
                 context.emit(TAC::GoTo { label: label_end.clone() });
 
-                // else
                 context.emit(TAC::Label { label: label_else });
-                stmt_to_ir(_els, context);
+                stmt_to_ir(els, context);
                 
-                // .Lend
                 context.emit(TAC::Label { label: label_end });
             } else {
                 // elseが無いとき
@@ -156,63 +159,55 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
                     cond,
                     label: label_end.clone()
                 });
-                let then_node = node.then.as_ref().unwrap();
-                stmt_to_ir(then_node, context);
+                stmt_to_ir(then, context);
                 context.emit(TAC::Label { label: label_end });
             }
         }
-        ND_BLOCK => {
-            let stmts = node.stmts.as_ref().unwrap();
+        Stmt::Block(stmts) => {
             for stmt in stmts {
                 stmt_to_ir(stmt, context);
             }
         }
-        ND_DEFUN => {
-            let fn_name = node.fn_name.clone().unwrap();
-            
+        Stmt::Fn { fn_name, params: _params, body } => {
             let mut params = Vec::new();
-            for param in node.params.as_ref().unwrap() {
-                let name = param.ident_name.clone().unwrap();
+            for param in _params {
+                let name = match param {
+                    Expr::Var(name) => name.to_owned(),
+                    _ => unreachable!("parameter should be identifier but got {:?}", param)
+                };
                 let dest = context.get_var_reg(&name);
                 params.push(Param::new(dest, name));
             }
 
-            context.emit(TAC::Fn { fn_name, params });
+            context.emit(TAC::Fn { fn_name: fn_name.clone(), params });
             
-            let stmts = node.stmts.as_ref().unwrap();
-            for stmt in stmts {
+            for stmt in body {
                 stmt_to_ir(stmt, context);
             }
         }
-        _ => {
-            expr_to_ir(node, context);
+        Stmt::ExprStmt(expr) => {
+            expr_to_ir(expr, context);
         }
     }
 
 }
 
-fn lval_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
-    match node.kind {
-        ND_DEREF => {
-            let lhs = node.lhs.as_ref().unwrap(); // 変数名もしくは参照外しが続く
-            if lhs.kind == ND_LVAR {
-                let name = lhs.ident_name.as_ref().unwrap();
-                let addr = context.get_var_reg(&name);
-                context.emit(TAC::EvalVar { dest: addr, name: name.clone() });
-                addr
-            } else {
-                let value = context.get_new_register();
-                let addr = lval_to_ir(lhs, context);
-                context.emit(TAC::LoadVar { value, addr });
-                value
+fn lval_to_ir(expr: &Expr, context: &mut GenIrContext) -> VirtualReg {
+    match expr {
+        Expr::Deref(_var) => {
+            let value = context.get_new_register();
+            let addr = lval_to_ir(&_var, context);
+            match &**_var {
+                Expr::Deref(_) => context.emit(TAC::LoadVar { value, addr }),
+                _ => ()
             }
+            value
         }
-        ND_LVAR => {
-            let name = node.ident_name.clone().expect("参照の対象が左辺値ではありません");
+        Expr::Var(name) => {
             let dest = context.get_var_reg(&name);
             context.emit(TAC::EvalVar { 
                 dest, 
-                name
+                name: name.to_string()
             });
             dest
         }
@@ -220,57 +215,50 @@ fn lval_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
     }
 }
 
-fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
-    match node.kind {
-        ND_ASSIGN => {
-            let lval = node.lhs.as_ref().unwrap();
-            let rhs = node.rhs.as_ref().unwrap();
+fn expr_to_ir(expr: &Expr, context: &mut GenIrContext) -> VirtualReg {
+    match expr {
+        Expr::Assign { lhs, rhs } => {
             let src = expr_to_ir(rhs, context);
             
-            match lval.kind {
-                ND_DEREF => {
+            match &**lhs {
+                Expr::Deref(_) => {
                     // *p = v の値は v
-                    let addr = lval_to_ir(lval, context);
+                    let addr = lval_to_ir(&lhs, context);
                     context.emit(TAC::Store { addr, src });
                 }
-                ND_LVAR => {
-                    let dest = lval_to_ir(lval, context);
+                Expr::Var(_) => {
+                    let dest = lval_to_ir(&lhs, context);
                     context.emit(TAC::Assign { 
                         dest, 
                         src 
                     });
                 }
-                _ => unreachable!("left value got not assingnable node: {:?}", lval.kind),
+                _ => unreachable!("left value got not assingnable node: {:?}", lhs),
             }
             src
         }
-        ND_NUM => {
-            let val = node.val.unwrap();
+        Expr::Num(val) => {
             let reg = context.get_new_register();
-            context.emit(TAC::LoadImm { dest: reg.clone(), value: val });
+            context.emit(TAC::LoadImm { dest: reg.clone(), value: *val });
             reg
         }
-        ND_ADD | ND_SUB | ND_MUL | ND_DIV | ND_LE | ND_LT | ND_EQ | ND_NE => {
-            let lhs = node.lhs.as_ref().unwrap();
-            let rhs = node.rhs.as_ref().unwrap();
-
-            // ここは最適化しない
+        Expr::Binary { op: _op, lhs, rhs } => {
+            // ここは即値入れるなどの最適化しない
             // divとそれ以外で場合分けが発生して面倒なことになる
             // 単一責務
             let left_operand = expr_to_ir(&lhs, context);
             let right_operand = expr_to_ir(&rhs, context);
 
             let dest_vreg = context.get_new_register();
-            let op = match node.kind {
-                ND_ADD => BinOp::Add,
-                ND_SUB => BinOp::Sub,
-                ND_MUL => BinOp::Mul,
-                ND_DIV => BinOp::Div,
-                ND_LE => BinOp::Le,
-                ND_LT => BinOp::Lt,
-                ND_EQ => BinOp::Eq,
-                ND_NE => BinOp::Ne,
-                _ => unreachable!(),
+            let op = match _op {
+                BinOp::Add => IrBinOp::Add,
+                BinOp::Sub => IrBinOp::Sub,
+                BinOp::Mul => IrBinOp::Mul,
+                BinOp::Div => IrBinOp::Div,
+                BinOp::Le => IrBinOp::Le,
+                BinOp::Lt => IrBinOp::Lt,
+                BinOp::Eq => IrBinOp::Eq,
+                BinOp::Ne => IrBinOp::Ne,
             };
             context.emit(TAC::BinOpCode {
                 dest: dest_vreg,
@@ -280,40 +268,40 @@ fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             });
             dest_vreg
         }
-        ND_LVAR => {
-            let name = node.ident_name.clone().unwrap();
+        Expr::Var(name) => {
             let dest = context.get_var_reg(&name);
             context.emit(TAC::EvalVar { 
                 dest, 
-                name
+                name: name.clone()
             });
             dest
         }
-        ND_ADDR => {
+        Expr::Addr(_name) => {
             // TODO: 型検証を導入するまではpanicする
             // nameフィールドを埋めているのが変数名であること
-            let name = node.lhs.as_ref().unwrap().ident_name.clone().expect("参照の対象が左辺値ではありません");
+            let name = match &**_name {
+                Expr::Var(n) => n,
+                _ => unreachable!("Addr has value that is not able to referenced (it should be a bug in parser!)")
+            };
             let var = context.get_var_reg(&name);
             let addr = context.get_new_register();
             context.emit(TAC::AddrOf { addr, var });
             addr
         }
-        ND_DEREF => {
+        Expr::Deref(deref) => {
             let dest = context.get_new_register();
-            let addr = expr_to_ir(node.lhs.as_ref().unwrap(), context);
+            let addr = expr_to_ir(&deref, context);
             context.emit(TAC::LoadVar { value: dest, addr });
             dest
         }
-        ND_CALL => {
-            let fn_name = node.fn_name.clone().unwrap();
+        Expr::Call { fn_name, args: _args } => {
             let mut args = Vec::new();
-            for arg in node.args.clone().unwrap() {
+            for arg in _args {
                 args.push(expr_to_ir(&arg, context));
             }
             let ret_reg = context.get_new_register();
-            context.emit(TAC::Call { fn_name, args, ret_reg });
+            context.emit(TAC::Call { fn_name: fn_name.clone(), args, ret_reg });
             ret_reg
         }
-        _ => unreachable!("{:?}", node.kind),
     }
 }
