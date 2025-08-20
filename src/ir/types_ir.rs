@@ -35,7 +35,7 @@ pub enum ThreeAddressCode {
     Assign { dest: VirtualReg, src: VirtualReg },
     EvalVar { var: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
     AddrOf { addr: VirtualReg, var: VirtualReg }, // 変数のアドレスを取る (&a)
-    LoadVar { dest: VirtualReg, addr: VirtualReg }, // 参照外し (*p)
+    LoadVar { value: VirtualReg, addr: VirtualReg }, // 参照外し (*p)
     Store { addr: VirtualReg, src: VirtualReg }, // 間接ストア (*p = v)
     Return { src: VirtualReg },
     IfFalse { cond: VirtualReg, label: Label }, // condが0ならlabelに飛ぶ
@@ -64,7 +64,7 @@ impl ThreeAddressCode {
             ThreeAddressCode::AddrOf { addr, var } => {
                 vec![*addr, *var]
             }
-            ThreeAddressCode::LoadVar { dest, addr: src } => {
+            ThreeAddressCode::LoadVar { value: dest, addr: src } => {
                 vec![*dest, *src]
             }
             ThreeAddressCode::Store { addr, src } => {

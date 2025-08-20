@@ -21,24 +21,27 @@ impl GenIrContext {
         }
     }
     
-    /// 中間表現のコードの入った配列を取得する
+    /// - 中間表現のコードの入った配列を取得する
+    /// - mainで使用
     pub fn get_ir_code(&self) -> Vec<TAC> {
         self.code.clone()
     }
     
-    /// 変数名と仮想レジスタのHashMapを取得する
+    /// - 変数名と仮想レジスタのHashMapを取得する
+    /// - mainで使用
     pub fn get_lvar_map(&self) -> HashMap<String, VirtualReg> {
         self.lvar_map.clone()
     }
 
+    /// 新しい仮想レジスタを作る
     fn get_new_register(&mut self) -> VirtualReg {
         let id = self.register_count;
         self.register_count += 1;
         VirtualReg { id }
     }
     
-    /// HashMapを使用して既にレジスタが割り当てられているか調べる
-    /// 既存の割り当てが無かったら新たにレジスタを作る
+    /// - HashMapを使用して既にレジスタが割り当てられているか調べる
+    /// - 既存の割り当てが無かったら新たにレジスタを作る
     fn get_var_reg(&mut self, name: &str) -> VirtualReg {
         if let Some(&reg) = self.lvar_map.get(name) {
             reg
@@ -49,6 +52,7 @@ impl GenIrContext {
         }
     }
     
+    /// ラベルの番号を返す
     fn get_label_count(&mut self) -> usize {
         let i = self.label_count;
         self.label_count += 1;
@@ -187,38 +191,58 @@ pub fn stmt_to_ir(node: &Node, context: &mut GenIrContext) {
 
 }
 
-pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
+fn lval_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
+    match node.kind {
+        ND_DEREF => {
+            let lhs = node.lhs.as_ref().unwrap(); // 変数名もしくは参照外しが続く
+            if lhs.kind == ND_LVAR {
+                let name = lhs.ident_name.as_ref().unwrap();
+                let addr = context.get_var_reg(&name);
+                context.emit(TAC::EvalVar { var: addr, name: name.clone() });
+                addr
+            } else {
+                let value = context.get_new_register();
+                let addr = lval_to_ir(lhs, context);
+                context.emit(TAC::LoadVar { value, addr });
+                value
+            }
+        }
+        ND_LVAR => {
+            let name = node.ident_name.clone().expect("参照の対象が左辺値ではありません");
+            let dest = context.get_var_reg(&name);
+            context.emit(TAC::EvalVar { 
+                var: dest, 
+                name
+            });
+            dest
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
     match node.kind {
         ND_ASSIGN => {
-            let lhs = node.lhs.as_ref().unwrap();
+            let lval = node.lhs.as_ref().unwrap();
             let rhs = node.rhs.as_ref().unwrap();
+            let src = expr_to_ir(rhs, context);
             
-            match lhs.kind {
+            match lval.kind {
                 ND_DEREF => {
-                    // TODO: lhs.lhsはあまりきれいではない
-                    let addr = expr_to_ir(lhs.lhs.as_ref().unwrap(), context);
-                    let src = expr_to_ir(rhs, context);
+                    // *p = v の値は v
+                    let addr = lval_to_ir(lval, context);
                     context.emit(TAC::Store { addr, src });
-                    // TODO: *p = v の値は参照か値かどっちになるんだ？
-                    src
                 }
                 ND_LVAR => {
-                    let name = lhs.ident_name.clone().expect("参照の対象が左辺値ではありません");
-                    let dest = context.get_var_reg(&name);
-                    context.emit(TAC::EvalVar { 
-                        var: dest, 
-                        name
-                    });
-                    let right_vreg = expr_to_ir(rhs, context);
-
+                    let dest = lval_to_ir(lval, context);
                     context.emit(TAC::Assign { 
                         dest, 
-                        src: right_vreg 
+                        src 
                     });
-                    dest
                 }
-                _ => unreachable!("left value got not assingnable node: {:?}", lhs.kind),
+                _ => unreachable!("left value got not assingnable node: {:?}", lval.kind),
             }
+            src
         }
         ND_NUM => {
             let val = node.val.unwrap();
@@ -277,7 +301,7 @@ pub fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
         ND_DEREF => {
             let dest = context.get_new_register();
             let addr = expr_to_ir(node.lhs.as_ref().unwrap(), context);
-            context.emit(TAC::LoadVar { dest, addr });
+            context.emit(TAC::LoadVar { value: dest, addr });
             dest
         }
         ND_CALL => {

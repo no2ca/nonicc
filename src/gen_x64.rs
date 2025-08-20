@@ -164,7 +164,7 @@ impl<'a> Generator<'a> {
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
                 println!("  lea {}, [rbp - {}]", addr_reg, offset);
             }
-            TAC::LoadVar { dest, addr } => {
+            TAC::LoadVar { value: dest, addr } => {
                 // 参照外し
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
