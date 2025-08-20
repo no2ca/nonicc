@@ -33,7 +33,7 @@ pub enum ThreeAddressCode {
     LoadImm { dest: VirtualReg, value: i32 },
     BinOpCode { dest: VirtualReg, left: VirtualReg, op: BinOp, right: VirtualReg },
     Assign { dest: VirtualReg, src: VirtualReg },
-    EvalVar { var: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
+    EvalVar { dest: VirtualReg, name: String }, // 生存期間の扱いを分かりやすく扱うために必要
     AddrOf { addr: VirtualReg, var: VirtualReg }, // 変数のアドレスを取る (&a)
     LoadVar { value: VirtualReg, addr: VirtualReg }, // 参照外し (*p)
     Store { addr: VirtualReg, src: VirtualReg }, // 間接ストア (*p = v)
@@ -58,7 +58,7 @@ impl ThreeAddressCode {
             ThreeAddressCode::Assign { dest, src } => {
                 vec![*dest, *src]
             }
-            ThreeAddressCode::EvalVar { var: dest, .. } => {
+            ThreeAddressCode::EvalVar { dest, .. } => {
                 vec![*dest]
             }
             ThreeAddressCode::AddrOf { addr, var } => {

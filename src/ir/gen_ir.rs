@@ -198,7 +198,7 @@ fn lval_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             if lhs.kind == ND_LVAR {
                 let name = lhs.ident_name.as_ref().unwrap();
                 let addr = context.get_var_reg(&name);
-                context.emit(TAC::EvalVar { var: addr, name: name.clone() });
+                context.emit(TAC::EvalVar { dest: addr, name: name.clone() });
                 addr
             } else {
                 let value = context.get_new_register();
@@ -211,7 +211,7 @@ fn lval_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
             let name = node.ident_name.clone().expect("参照の対象が左辺値ではありません");
             let dest = context.get_var_reg(&name);
             context.emit(TAC::EvalVar { 
-                var: dest, 
+                dest, 
                 name
             });
             dest
@@ -282,12 +282,12 @@ fn expr_to_ir(node: &Node, context: &mut GenIrContext) -> VirtualReg {
         }
         ND_LVAR => {
             let name = node.ident_name.clone().unwrap();
-            let dest_vreg = context.get_var_reg(&name);
+            let dest = context.get_var_reg(&name);
             context.emit(TAC::EvalVar { 
-                var: dest_vreg, 
+                dest, 
                 name
             });
-            dest_vreg
+            dest
         }
         ND_ADDR => {
             // TODO: 型検証を導入するまではpanicする
