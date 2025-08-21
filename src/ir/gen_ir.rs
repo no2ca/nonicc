@@ -198,10 +198,15 @@ fn lval_to_ir(expr: &Expr, context: &mut GenIrContext) -> VirtualReg {
             let value = context.get_new_register();
             let addr = lval_to_ir(&_var, context);
             match &**_var {
-                Expr::Deref(_) => context.emit(TAC::LoadVar { value, addr }),
-                _ => ()
+                Expr::Deref(_) => {
+                    context.emit(TAC::LoadVar { value, addr });
+                    value
+                }
+                _ => {
+                    addr
+                }
             }
-            value
+            
         }
         Expr::Var(name) => {
             let dest = context.get_var_reg(&name);
