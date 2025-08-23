@@ -192,13 +192,15 @@ pub fn stmt_to_ir(stmt: &Stmt, context: &mut GenIrContext) {
 
 }
 
-fn lval_to_ir(expr: &Expr, context: &mut GenIrContext) -> VirtualReg {
+fn gen_lval_addr(expr: &Expr, context: &mut GenIrContext) -> VirtualReg {
     match expr {
         Expr::Deref(_var) => {
-            let value = context.get_new_register();
-            let addr = lval_to_ir(&_var, context);
+            let addr = gen_lval_addr(&_var, context);
             match &**_var {
+                // 参照外しが続いているとき
+                // **pp はまず *pp (LoadVar) をする
                 Expr::Deref(_) => {
+                    let value = context.get_new_register();
                     context.emit(TAC::LoadVar { value, addr });
                     value
                 }
@@ -227,20 +229,19 @@ fn expr_to_ir(expr: &Expr, context: &mut GenIrContext) -> VirtualReg {
             
             match &**lhs {
                 Expr::Deref(_) => {
-                    // *p = v の値は v
-                    let addr = lval_to_ir(&lhs, context);
+                    let addr = gen_lval_addr(&lhs, context);
                     context.emit(TAC::Store { addr, src });
                 }
-                Expr::Var(_) => {
-                    let dest = lval_to_ir(&lhs, context);
+                Expr::Var(name) => {
+                    let dest = context.get_var_reg(name);
                     context.emit(TAC::Assign { 
                         dest, 
-                        src 
+                        src,
                     });
                 }
                 _ => unreachable!("left value got not assingnable node: {:?}", lhs),
             }
-            src
+            return src;
         }
         Expr::Num(val) => {
             let reg = context.get_new_register();
