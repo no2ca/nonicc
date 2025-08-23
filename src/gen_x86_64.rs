@@ -46,6 +46,9 @@ impl<'a> Generator<'a> {
         self.regs.get(*reg_idx).expect(&msg).to_string()
     }
     
+    /// 仮想レジスタを受け取り, 対応する変数のオフセットを返す.
+    /// # Panics
+    /// 変数の仮想レジスタでない場合 panic する.
     fn get_offset(&self, vreg: &VirtualReg) -> usize {
         let msg = format!("Missing vreg key '{:?}' in 'vreg_to_offset'", vreg);
         let offset = self.frame.vreg_to_offset.get(vreg).expect(&msg);
@@ -147,10 +150,8 @@ impl<'a> Generator<'a> {
                 }
             }
             TAC::Assign { dest, src } => {
-                let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let src_reg = self.vreg_to_string(src, vreg_to_reg);
                 let offset = self.get_offset(dest);
-                println!("  mov {}, {}", dest_reg, src_reg);
                 println!("  mov [rbp - {}], {}", offset, src_reg);
             }
             TAC::EvalVar { .. } => {
@@ -169,6 +170,7 @@ impl<'a> Generator<'a> {
                 let dest_reg = self.vreg_to_string(dest, vreg_to_reg);
                 let addr_reg = self.vreg_to_string(addr, vreg_to_reg);
                 // 変数のときは最新の値をロードしてから
+                // 変数ではなくて参照外しが続いているケースがあるため分岐する
                 if let Some(offset) = self.frame.vreg_to_offset.get(addr) {
                     println!("  mov {}, [rbp - {}]", addr_reg, offset);
                 }
