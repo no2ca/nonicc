@@ -1,40 +1,12 @@
 use anyhow::anyhow;
 
-use crate::types::{ Token, LVar };
 use crate::types::{ BinOp, Expr, Stmt };
 use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE, TK_WHILE, TK_FOR };
 use crate::lexer::TokenStream;
 use crate::error_at;
 
-pub struct Lvars {
-    pub lvars_vec: Vec<LVar>,
-}
-
-impl Lvars {
-    fn new() -> Self {
-        // 先頭の識別子は衝突しない名前で
-        let head_lvars = LVar::new("__dummy".to_string(), 12, 0);
-        Lvars { lvars_vec: vec![head_lvars] }
-    }
-
-    /// 現在見ている変数名を検索する
-    /// ローカル変数のオフセットを決めるのに使用する
-    fn find_lvar(&self, cur: &Token) -> Option<LVar> {
-        let lvars_vec = &self.lvars_vec;
-        // 先頭を含めなければ衝突しない
-        for i in 1..lvars_vec.len() {
-            let lvar = &lvars_vec[i];
-            if lvar.len == cur.len && lvar.name == cur.str {
-                return Some(lvar.clone());
-            }
-        }
-        None
-    }
-}
-
 pub struct Parser<'a> {
     pub tokens: TokenStream<'a>,
-    pub lvars: Lvars,
     defined_fn: Vec<String>,
 }
 
@@ -42,7 +14,6 @@ impl<'a> Parser<'a> {
     pub fn new(tokens: TokenStream) -> Parser {
         Parser {
             tokens,
-            lvars: Lvars::new(),
             defined_fn: Vec::new(),
         }
     }
@@ -476,19 +447,9 @@ impl<'a> Parser<'a> {
                 args = self.args();
                 return Expr::Call { fn_name: ident.str, args };
             }
-
-            // ローカル変数が既にあるか調べる
-            if let Some(lvar) = self.lvars.find_lvar(&ident) {
-                return Expr::Var(lvar.name);
-            } else {
-                // ない場合は手前のに8を足して使う
-                // TokenStreamの初期化時に先頭があるため
-                // TODO: LVarでオフセットを扱う必要はない
-                let offset = self.lvars.lvars_vec.last().unwrap().offset + 8;
-                let lvar = LVar::new(ident.str, ident.len, offset);
-                self.lvars.lvars_vec.push(lvar.clone());
-                return Expr::Var(lvar.name);
-            }
+            else {
+                return Expr::Var(ident.str);
+            } 
         }
 
         let num = match self.tokens.expect_number() {
