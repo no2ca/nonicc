@@ -5,3 +5,4 @@ foo.*
 scripts/run_code.sh
 scripts/test_old.sh
 src/codegen.rs
+.clinerules
