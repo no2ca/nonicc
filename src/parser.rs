@@ -8,6 +8,7 @@ use crate::error_at;
 pub struct Parser<'a> {
     pub tokens: TokenStream<'a>,
     defined_fn: Vec<String>,
+    lvars: Vec<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -15,6 +16,7 @@ impl<'a> Parser<'a> {
         Parser {
             tokens,
             defined_fn: Vec::new(),
+            lvars: Vec::new(),
         }
     }
     
@@ -75,6 +77,9 @@ impl<'a> Parser<'a> {
     
     /// defun = ident "(" params ")" "{" stmt* "}"
     pub fn defun(&mut self) -> Stmt {
+        // ローカル変数の配列を初期化
+        self.lvars.clear();
+
         // 関数名を読む
         let fn_name: String = match self.tokens.consume_ident() {
             Some(ident) => ident.str,
@@ -105,7 +110,6 @@ impl<'a> Parser<'a> {
         while !self.tokens.consume("}") {
             body.push(self.stmt());
         }
-        
         Stmt::Fn { fn_name, params, body }
     }
     
