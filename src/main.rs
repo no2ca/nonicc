@@ -59,7 +59,7 @@ fn main() {
     // 中間表現の生成
     use nonicc::ir::gen_ir::{ GenIrContext, stmt_to_ir };
     use nonicc::reg_alloc::{interval_analysis, register_allocation};
-    use nonicc::gen_x64;
+    use nonicc::gen_x86_64;
 
     // caller-saved (呼び出し側が保存するレジスタ) だけを使用
     let regs = vec!["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
@@ -88,7 +88,7 @@ fn main() {
         let frame = Frame::from_lvar_map(lvar_map);
 
         // コード生成
-        let generator = gen_x64::Generator::new(regs.clone(), code, frame);
+        let generator = gen_x86_64::Generator::new(regs.clone(), code, frame);
         generator.gen_fn(vreg_to_reg.clone());
 
         if args.debug {
