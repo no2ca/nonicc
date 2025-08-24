@@ -1,4 +1,4 @@
-use nonicc::types::{ Token, TokenKind::* };
+use nonicc::types::{ Token, TokenKind::*, TypeKind };
 use nonicc::lexer::Tokenizer;
 
 /// トークナイザのテスト
@@ -182,5 +182,27 @@ fn tokenize_forx() {
         Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 7 }
     ];
     
+    assert_eq!(tokens, expected);
+}
+
+#[test]
+fn tokenize_type_int() {
+    let mut tokinizer = Tokenizer::new("int");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_TYPE(TypeKind::Int), val: None, str: String::from("int"), len: 3, pos: 0 },
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 3 }
+    ];
+    assert_eq!(tokens, expected);
+}
+
+#[test]
+fn tokenize_int_() {
+    let mut tokinizer = Tokenizer::new("int_");
+    let tokens = tokinizer.tokenize();
+    let expected = vec![
+        Token { kind: TK_IDENT, val: None, str: "int_".to_string(), len: 4, pos: 0 }, 
+        Token { kind: TK_EOF, val: None, str: "<EOF>".to_string(), len: 1, pos: 4 }
+    ];
     assert_eq!(tokens, expected);
 }
