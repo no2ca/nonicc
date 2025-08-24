@@ -1,5 +1,10 @@
 #![allow(non_camel_case_types)]
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum TypeKind {
+    Int,
+}
+
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenKind {
     TK_RETURN,   // return
@@ -10,6 +15,7 @@ pub enum TokenKind {
     TK_RESERVED, // 記号
     TK_IDENT,    // 変数名の識別子
     TK_NUM,      // 整数
+    TK_TYPE(TypeKind), // 型
     TK_EOF,      // 入力の終わり
 }
 

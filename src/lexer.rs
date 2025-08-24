@@ -2,7 +2,7 @@ use std::usize;
 
 use anyhow::anyhow;
 
-use crate::types::{ Token, TokenKind::{self, *} };
+use crate::types::{ Token, TokenKind::{self, *}, TypeKind };
 use crate::error_at;
 
 pub struct Tokenizer<'a> {
@@ -60,6 +60,18 @@ impl<'a> Tokenizer<'a> {
             // 空白を飛ばす
             if c.is_whitespace() {
                 self.next();
+                continue;
+            }
+            
+            // intをトークナイズする
+            // 次の文字も調べる必要がある
+            let len_int = "int".len();
+            if self.input.get(self.pos..).unwrap().starts_with("int") && !self.is_alnum(self.pos + len_int) {
+                let next = Token::new(TK_TYPE(TypeKind::Int), String::from("int"), len_int, self.pos);
+                self.pos += len_int;
+                
+                tok_vec.push(next);
+                
                 continue;
             }
 
