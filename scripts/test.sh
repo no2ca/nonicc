@@ -80,22 +80,22 @@ return 10; '
 
 # 四則演算で条件分岐
 assert 1 '
-x = 5; y = 10;
-if (x - y < 0) 
+int x; int y; x = 5; y = 10;
+if (x - y < 0)
     return 1;
 return 0;
 '
 
 assert 1 '
-x = 1; y = 2; z = 3;
-if (x + y * z > 6) 
+int x; int y; int z; x = 1; y = 2; z = 3;
+if (x + y * z > 6)
     return 1;
 return 0;
 '
 
 # ローカル変数の更新
 assert 20 '
-x = 5; y = 10;
+int x; int y; x = 5; y = 10;
 if (y == 10)
     x = 20;
     return x;
@@ -104,7 +104,7 @@ return 0;
 
 # ネストしたif文
 assert 1 '
-x = 1; y = 2; z = 3;
+int x; int y; int z; x = 1; y = 2; z = 3;
 if (x)
     if (y)
         if (z)
@@ -113,7 +113,7 @@ return 0;
 '
 
 assert 20 '
-x = 1; y = 1; z = 0;
+int x; int y; int z; x = 1; y = 1; z = 0;
 if (x)
     if (y)
         if (z)
@@ -122,7 +122,7 @@ return 20;
 '
 
 assert 4 '
-a = 0; b = 1; c = 1;
+int a; int b; int c; a = 0; b = 1; c = 1;
 if (a)
     if (b)
         if (c)
@@ -136,7 +136,7 @@ else
 '
 
 assert 1 '
-a = 1; b = 1; c = 1;
+int a; int b; int c; a = 1; b = 1; c = 1;
 if (a)
     if (b)
         if (c)
@@ -150,7 +150,7 @@ else
 '
 
 assert 1 '
-a = 1; b = 1; c = 1;
+int a; int b; int c; int x; a = 1; b = 1; c = 1;
 x = 0;
 if (a)
     if (b)
@@ -167,28 +167,28 @@ return x;
 '
 
 assert 255 '
-x = 1; y = 0;
-if (x) 
+int x; int y; x = 1; y = 0;
+if (x)
     if (y)
         return 0;
 return 255;
 '
 
 assert 1 '
-x = 1;
+int x; x = 1;
 if (x == 0)
     return 0;
 else if (x == 1)
     return 1;
-else 
+else
     return 3;
 '
 
 assert 30 '
-x = 3;
+int x; x = 3;
 if (x == 1)
     return 10;
-else if (x == 2)  
+else if (x == 2)
     return 20;
 else if (x == 3)
     return 30;
@@ -197,7 +197,7 @@ else
 '
 
 assert 2 '
-a = 1;
+int a; a = 1;
 if (a == 1)
     a = a + 1;
 else if (a == 1)
@@ -208,7 +208,7 @@ return a;
 '
 
 assert 1 '
-x = 1;
+int x; x = 1;
 if (x > 5) {
     return 5;
 } else {
@@ -217,7 +217,7 @@ if (x > 5) {
 '
 
 assert 150 '
-x = 1;
+int x; int y; int z; x = 1;
 {
     if (x) {
         y = 100;
@@ -230,14 +230,14 @@ return z;
 '
 
 assert 42 '
-x = 42;
+int x; x = 42;
 {
 }
 return x;
 '
 
 assert 2 '
-a = 1;
+int a; a = 1;
 if (a == 1) {
     a = a + 1;
 } else if (a == 1) {
@@ -249,7 +249,7 @@ return a;
 '
 
 assert 1 '
-a = 1; b = 1; c = 1;
+int a; int b; int c; int x; a = 1; b = 1; c = 1;
 x = 0;
 if (a) {
     if (b) {
@@ -268,7 +268,7 @@ return x;
 '
 
 assert 55 "
-x = 1; sum = 0;
+int x; int sum; x = 1; sum = 0;
 while (x <= 10) {
     sum = sum + x;
     x = x + 1;
@@ -277,7 +277,7 @@ return sum;
 "
 
 assert 0 "
-x = 11; sum = 0;
+int x; int sum; x = 11; sum = 0;
 while (x <= 10) {
     sum = sum + x;
     x = x + 1;
@@ -286,7 +286,7 @@ return sum;
 "
 
 assert 55 "
-x = 10; sum = 0;
+int x; int sum; x = 10; sum = 0;
 while (x > 0) {
     sum = sum + x;
     x = x - 1;
@@ -295,7 +295,7 @@ return sum;
 "
 
 assert 6 "
-x = 3; sum = 0;
+int x; int sum; x = 3; sum = 0;
 while (x) {
     sum = sum + x;
     x = x - 1;
@@ -304,7 +304,7 @@ return sum;
 "
 
 assert 18 "
-i = 1; sum = 0;
+int i; int sum; int j; i = 1; sum = 0;
 while (i <= 3) {
     j = 1;
     while (j <= 2) {
@@ -317,7 +317,7 @@ return sum;
 "
 
 assert 15 "
-x = 1; sum = 0;
+int x; int sum; x = 1; sum = 0;
 while (x * x <= 25) {
     sum = sum + x;
     x = x + 1;
@@ -326,7 +326,7 @@ return sum;
 "
 
 assert 8 "
-x = 1; sum = 0;
+int x; int sum; x = 1; sum = 0;
 while (x <= 10000) {
     sum = sum + x;
     x = x + 1;
@@ -335,7 +335,7 @@ return sum;
 "
 
 assert 55 "
-sum = 0;
+int sum; int x; sum = 0;
 for (x = 1; x <= 10; x = x + 1) {
     sum = sum + x;
 }
@@ -343,7 +343,7 @@ return sum;
 "
 
 assert 0 "
-sum = 0;
+int sum; int x; sum = 0;
 for (x = 11; x <= 10; x = x + 1) {
     sum = sum + x;
 }
@@ -351,7 +351,7 @@ return sum;
 "
 
 assert 55 "
-sum = 0;
+int sum; int x; sum = 0;
 for (x = 10; x > 0; x = x - 1) {
     sum = sum + x;
 }
@@ -359,7 +359,7 @@ return sum;
 "
 
 assert 18 "
-sum = 0;
+int sum; int i; int j; sum = 0;
 for (i = 1; i <= 3; i = i + 1) {
     for (j = 1; j <= 2; j = j + 1) {
         sum = sum + i * j;
@@ -369,7 +369,7 @@ return sum;
 "
 
 assert 21 "
-sum = 0;
+int sum; int x; sum = 0;
 for (x = (2 + 3); x < 10; x = x + 2) {
     sum = sum + x;
 }
@@ -389,27 +389,27 @@ fi
 # "
 
 assert 3 "
-x = 3;
+int x; int y; x = 3;
 y = &x;
 return *y;
 "
 
 assert 3 "
-x = 3;
+int x; int y; int z; x = 3;
 y = &x;
 z = &y;
 return **z;
 "
 
 assert 3 "
-x = 1;
+int x; int y; x = 1;
 y = &x;
 *y = 3;
 return x;
 "
 
 assert 3 "
-x = 1;
+int x; int y; int a; int b; x = 1;
 y = 2;
 a = &x;
 b = &y;
@@ -417,7 +417,7 @@ return *a + *b;
 "
 
 assert 30 "
-a = 1; b = 2;
+int a; int b; int p; a = 1; b = 2;
 p = &a;
 *p = 10;
 p = &b;
@@ -426,7 +426,7 @@ return a + b;
 "
 
 assert 3 "
-a = 1;
+int a; int p; int pp; int ppp; a = 1;
 p = &a;
 pp = &p;
 ppp = &pp;
@@ -435,7 +435,7 @@ return a;
 "
 
 assert 30 "
-a = 10;
+int a; int p; int pp; int b; a = 10;
 p = &a;
 pp = &p;
 *p = 20;

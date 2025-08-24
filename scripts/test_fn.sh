@@ -24,6 +24,7 @@ assert() {
 
 assert 0 "
 foo() {
+    int a;
     a = 1;
     return a;
 }
@@ -36,6 +37,7 @@ main() {
 
 assert 42 "
 foo() {
+    int a; int b;
     a = 13;
     b = 29;
     return a + b;
