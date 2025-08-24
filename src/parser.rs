@@ -436,8 +436,8 @@ impl<'a> Parser<'a> {
     }
 
     /// primary = num |
-    ///            ident ( "(" params ")" )? |
-    ///            "(" expr ")" 
+    ///           ident ( "(" params ")" )? |
+    ///           "(" expr ")" 
     fn primary(&mut self) -> Expr {
         // "(" expr ")"
         if self.tokens.consume("(") {
@@ -453,6 +453,7 @@ impl<'a> Parser<'a> {
         }
 
         // ident ( args )?
+        let pos_ident = self.tokens.get_current_token().pos;
         if let Some(ident) = self.tokens.consume_ident() {
             // 関数かどうか調べる
             let args;
@@ -460,12 +461,17 @@ impl<'a> Parser<'a> {
                 // 定義済みか調べる
                 if !self.defined_fn.contains(&ident.str) {
                     let e = anyhow!("定義されていない関数を呼び出しています");
-                    error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+                    error_at(self.tokens.input, pos_ident, e);
                 }
                 args = self.args();
                 return Expr::Call { fn_name: ident.str, args };
             }
             else {
+                // 定義済みか調べる
+                if !self.lvars.contains(&ident.str) {
+                    let e = anyhow!("Use of undeclared identifier '{}'", ident.str);
+                    error_at(self.tokens.input, pos_ident, e);
+                }
                 return Expr::Var(ident.str);
             } 
         }
