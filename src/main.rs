@@ -49,6 +49,7 @@ fn main() {
 
     if args.debug {
         eprintln!("[DEBUG] node: \n{:?}", nodes);
+        eprintln!("[DEBUG] lvars: \n{:?}", parser.lvars);
     }
 
 

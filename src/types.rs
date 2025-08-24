@@ -47,6 +47,11 @@ pub enum BinOp {
 }
 
 #[derive(Debug)]
+pub enum Type {
+    Int,
+}
+
+#[derive(Debug)]
 pub enum Expr {
     Num(i32),
     Var(String),
@@ -91,5 +96,9 @@ pub enum Stmt {
         fn_name: String,
         params: Vec<Expr>,
         body: Vec<Stmt>,
+    },
+    VarDecl {
+        name: String,
+        ty: Type,
     },
 }

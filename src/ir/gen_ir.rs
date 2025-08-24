@@ -188,6 +188,7 @@ pub fn stmt_to_ir(stmt: &Stmt, context: &mut GenIrContext) {
         Stmt::ExprStmt(expr) => {
             expr_to_ir(expr, context);
         }
+        Stmt::VarDecl { .. } => todo!()
     }
 
 }

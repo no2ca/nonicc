@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 
-use crate::types::{ BinOp, Expr, Stmt };
+use crate::types::{ BinOp, Expr, Stmt, Type, TypeKind };
 use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE, TK_WHILE, TK_FOR };
 use crate::lexer::TokenStream;
 use crate::error_at;
@@ -8,7 +8,7 @@ use crate::error_at;
 pub struct Parser<'a> {
     pub tokens: TokenStream<'a>,
     defined_fn: Vec<String>,
-    lvars: Vec<String>,
+    pub lvars: Vec<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -114,13 +114,27 @@ impl<'a> Parser<'a> {
     }
     
     /// stmt = expr ";" | 
+    ///        "int" ident ";" |
     ///        "while" "(" expr ")" stmt |
     ///        "if"  "(" expr ")" stmt ("else" stmt)? |
     ///        "for" "(" expr? ";" expr? ";" expr? ")" stmt |
-    ///        "{" stmt* "}"
+    ///        "{" stmt* "}" |
     ///        "return" expr ";" |
     fn stmt(&mut self) -> Stmt {
-        if self.tokens.consume_keyword(TK_WHILE) {
+        if self.tokens.consume_type(TypeKind::Int) {
+            // 変数宣言
+            let name = if let Some(ident) = self.tokens.consume_ident() {
+                ident.str
+            } else {
+                let e = anyhow!("expected identifier");
+                error_at(self.tokens.input, self.tokens.get_current_token().pos, e)
+            };
+            if let Err(e) = self.tokens.expect(";") {
+                error_at(self.tokens.input, self.tokens.get_current_token().pos, e)
+            }
+            self.lvars.push(name.clone());
+            Stmt::VarDecl { name, ty: Type::Int }
+        } else if self.tokens.consume_keyword(TK_WHILE) {
             // while文をパース
             self.tokens.expect("(").unwrap_or_else( |e|{
                 eprintln!("Error While Parsing");

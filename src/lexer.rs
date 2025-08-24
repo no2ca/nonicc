@@ -239,6 +239,21 @@ impl<'a> TokenStream<'a> {
     pub fn is_eof(&self) -> bool {
         self.get_current_token().kind == TK_EOF
     }
+    
+    pub(crate) fn consume_type(&mut self, typekind: TypeKind) -> bool {
+        let tok = self.tok_vec.get(self.idx).unwrap();
+        match &tok.kind {
+            TK_TYPE(ty) => {
+                if *ty == typekind {
+                    self.idx += 1;
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false
+        }
+    }
 
     pub(crate) fn consume(&mut self, op: &str) -> bool {
         let tok = self.tok_vec.get(self.idx).unwrap();
