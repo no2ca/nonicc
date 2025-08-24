@@ -40,18 +40,18 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum BinOp {
     Add, Sub, Mul, Div,
     Le, Lt, Eq, Ne,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Type {
     Int,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Num(i32),
     Var(String),
@@ -72,7 +72,7 @@ pub enum Expr {
     Deref (Box<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Stmt {
     ExprStmt(Expr),
     Return(Expr),
