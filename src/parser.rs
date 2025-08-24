@@ -37,6 +37,12 @@ impl<'a> Parser<'a> {
                         error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                     }
                 };
+                // 関数のパラメータは関数スコープで存在しているため
+                // 直前で変数以外はエラーになるため, 変数のみ処理
+                match &param {
+                    Expr::Var(str) => self.lvars.push(str.clone()),
+                    _ => unreachable!()
+                }
                 params.push(param);
                 if self.tokens.consume(",") {
                     continue;
