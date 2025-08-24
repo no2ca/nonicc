@@ -51,28 +51,30 @@ assert 1 ' return 1 <= 1; '
 assert 0 ' return 1 > 1; '
 assert 1 ' return 1 >= 1; '
 
-assert 42 " a = 42; return a; "
-assert 2 " a = 1; a = a + 1; return a; "
-assert 3 " a = 1; b = 2; a = a + b; return a; "
-assert 3 " a = 1; b = 2; c = a + b; return c; "
-assert 0 ' a = 0; return a; '
-assert 1 ' a = 1; return a; '
-assert 25 ' a = 5; 
+assert 42 " int a; a = 42; return a; "
+assert 2 " int a; a = 1; a = a + 1; return a; "
+assert 3 " int a; int b; a = 1; b = 2; a = a + b; return a; "
+assert 3 " int a; int b; int c; a = 1; b = 2; c = a + b; return c; "
+assert 0 ' int a; a = 0; return a; '
+assert 1 ' int a; a = 1; return a; '
+assert 25 ' int a; int b; int c; a = 5; 
 b = (a + 1) * 2 / 3 + 1; 
 c = b * b; return c; '
 
-assert 2 ' foo = 1; bar = 2; return foo * bar; '
-assert 4 ' foo = 3; bar = 4; foo = bar; return foo;'
-assert 10 " a = 1; b = 2; c = 3; d = 4; return a+b+c+d; "
+assert 2 ' int foo; int bar; foo = 1; bar = 2; return foo * bar; '
+assert 4 ' int foo; int bar; foo = 3; bar = 4; foo = bar; return foo;'
+assert 10 " int a; int b; int c; int d; a = 1; b = 2; c = 3; d = 4; return a+b+c+d; "
 
 # 単純なif文
 assert 10 '
+int x;
 x = 1;
 if (x > 5)
     return 1;
 return 10; '
 
 assert 10 '
+int x;
 x = 10;
 if (x < 5)
     return 1;
