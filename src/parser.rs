@@ -27,8 +27,16 @@ impl<'a> Parser<'a> {
             error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
         });
         let mut params = Vec::new();
+        // パラメータが無い場合はif文の中身は実行されない
         if !self.tokens.consume(")") {
+            // カッコが閉じるまで型と変数を読む
             loop {
+                // 型を読む
+                // 一時的にintのみ読む
+                if !self.tokens.consume_type(TypeKind::Int) {
+                    let e = anyhow!("parameter declaration requires a type");
+                    error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
+                }
                 let param = match self.tokens.consume_ident() {
                     Some(t) => Expr::Var(t.str),
                     None => {
@@ -37,7 +45,7 @@ impl<'a> Parser<'a> {
                         error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
                     }
                 };
-                // 関数のパラメータは関数スコープで存在しているため
+                // 関数のパラメータは関数スコープで存在しているためローカル変数に追加
                 // 直前で変数以外はエラーになるため, 変数のみ処理
                 match &param {
                     Expr::Var(str) => self.lvars.push(str.clone()),
@@ -86,6 +94,13 @@ impl<'a> Parser<'a> {
         // ローカル変数の配列を初期化
         self.lvars.clear();
 
+        // 関数の戻り値の型を読む
+        // 一時的にintのみ読む
+        if !self.tokens.consume_type(TypeKind::Int) {
+            let e = anyhow!("type specifier missing");
+            error_at(self.tokens.input, self.tokens.get_current_token().pos, e);
+        }
+
         // 関数名を読む
         let fn_name: String = match self.tokens.consume_ident() {
             Some(ident) => ident.str,
@@ -119,13 +134,13 @@ impl<'a> Parser<'a> {
         Stmt::Fn { fn_name, params, body }
     }
     
-    /// stmt = expr ";" | 
-    ///        "int" ident ";" |
+    /// stmt = "int" ident ";" | 
     ///        "while" "(" expr ")" stmt |
     ///        "if"  "(" expr ")" stmt ("else" stmt)? |
     ///        "for" "(" expr? ";" expr? ";" expr? ")" stmt |
     ///        "{" stmt* "}" |
     ///        "return" expr ";" |
+    ///        expr ";" |
     fn stmt(&mut self) -> Stmt {
         if self.tokens.consume_type(TypeKind::Int) {
             // 変数宣言

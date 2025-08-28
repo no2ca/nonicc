@@ -37,6 +37,9 @@ fn main() {
     while !parser.tokens.is_eof()  {
 
         nodes.push(parser.defun());
+        if args.debug {
+            eprintln!("[DEBUG] lvars: \n{:?}", parser.lvars);
+        }
 
         if parser.tokens.idx == last_idx {
             // トークンが進まないときはエラーを出す
@@ -49,7 +52,6 @@ fn main() {
 
     if args.debug {
         eprintln!("[DEBUG] node: \n{:?}", nodes);
-        eprintln!("[DEBUG] lvars: \n{:?}", parser.lvars);
     }
 
 
