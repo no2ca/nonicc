@@ -7,7 +7,7 @@ use nonicc::{
 
 #[test]
 fn parse_int_decl() {
-    let input = "main() { int a; }";
+    let input = "int main() { int a; }";
     let mut tokenizer = Tokenizer::new(input);
     let tok_vec = tokenizer.tokenize();
     let token_stream = TokenStream::new(tok_vec, input);

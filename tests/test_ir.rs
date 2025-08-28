@@ -6,7 +6,7 @@ use nonicc::lexer::{ Tokenizer, TokenStream };
 // 足し算のテスト
 #[test]
 fn ir_add() {
-    let input = " main() {1 + 1;} ";
+    let input = " int main() {1 + 1;} ";
     let mut tokenizer = Tokenizer::new(input);
     let tok_vec = tokenizer.tokenize();
     let tokens = TokenStream::new(tok_vec, input);
@@ -30,7 +30,7 @@ fn ir_add() {
 // 四則演算のテスト
 #[test]
 fn ir_basic_op() {
-    let input = " main() {1 + 2 - 3 * 4 / 5;} ";
+    let input = " int main() {1 + 2 - 3 * 4 / 5;} ";
     let mut tokenizer = Tokenizer::new(input);
     let tok_vec = tokenizer.tokenize();
     let tokens = TokenStream::new(tok_vec, input);
@@ -60,7 +60,7 @@ fn ir_basic_op() {
 // 引数のある関数定義のテスト
 #[test]
 fn ir_function_with_params() {
-    let input = " foo(a, b) { a; b; return 42; } ";
+    let input = " int foo(int a, int b) { a; b; return 42; } ";
     let mut tokenizer = Tokenizer::new(input);
     let tok_vec = tokenizer.tokenize();
     let tokens = TokenStream::new(tok_vec, input);
