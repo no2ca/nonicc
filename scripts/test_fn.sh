@@ -23,127 +23,127 @@ assert() {
 }
 
 assert 0 "
-foo() {
+int foo() {
     int a;
     a = 1;
     return a;
 }
 
-main() {
+int main() {
     foo();
     return 0;
 }
 "
 
 assert 42 "
-foo() {
+int foo() {
     int a; int b;
     a = 13;
     b = 29;
     return a + b;
 }
 
-main() {
+int main() {
     return foo();
 }
 "
 
 assert 3 "
-foo(a, b) {
+int foo(int a, int b) {
     return a + b;
 }
 
-main() {
+int main() {
     return foo(1, 2);
 }
 "
 
 assert 36 "
-bar(a) {
+int bar(int a) {
     return a + a;
 }
 
-foo(a) {
+int foo(int a) {
     return bar(a) * bar(a);
 }
 
-main() {
+int main() {
     return foo(3);
 }
 "
 
 assert 15 "
-foo(a, b, c, d, e) {
+int foo(int a, int b, int c, int d, int e) {
     return a + b + c + d + e;
 }
 
-main() {
+int main() {
     return foo(1, 2, 3, 4, 5);
 }
 "
 
 assert 6 "
-fact(a) {
+int fact(int a) {
     if (a <= 1) return 1;
     return a * fact(a - 1);
 }
 
-main() {
+int main() {
     return fact(3);
 }
 "
 
 assert 8 "
-fib(n) {
+int fib(int n) {
     if (n <= 1) return n;
     return fib(n - 1) + fib(n - 2);
 }
 
-main() {
+int main() {
     return fib(6);
 }
 "
 
 assert 55 "
-sum_to(n) {
+int sum_to(int n) {
     if (n <= 0) return 0;
     return n + sum_to(n - 1);
 }
 
-main() {
+int main() {
     return sum_to(10);
 }
 "
 
 assert 0 "
-fact(n, acc) {
+int fact(int n, int acc) {
     if (n <= 1) return acc;
     return fact(n - 1, acc * n);
 }
 
-main() {
+int main() {
    return fact(16, 2);
 }
 "
 
 assert 125 "
-ack(m, n) {
+int ack(int m, int n) {
     if (m == 0) return n + 1;
     if (n == 0) return ack(m - 1, 1);
     return ack(m - 1, ack(m, n - 1));
 }
 
-main() {
+int main() {
     return ack(3, 4);
 }
 "
 
 assert 42 "
-sum(a, b, c, d, e, f) {
+int sum(int a, int b, int c, int d, int e, int f) {
     return a + b + c + d + e + f;
 }
 
-main() {
+int main() {
     return sum(6, 7, 6, 8, 6, 9);
 }
 "

@@ -7,10 +7,10 @@ assert() {
     expected="$1"
     input="$2"
     if [ "$debug" = "true" ]; then
-        ./target/debug/nonicc "main() { $input }" -d > tmp.s
+        ./target/debug/nonicc "int main() { $input }" -d > tmp.s
         cat tmp.s
     else
-        ./target/debug/nonicc "main() { $input }" > tmp.s
+        ./target/debug/nonicc "int main() { $input }" > tmp.s
     fi
     gcc -z noexecstack -o tmp tmp.s
         ./tmp
