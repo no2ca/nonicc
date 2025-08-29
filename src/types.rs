@@ -49,6 +49,7 @@ pub enum BinOp {
 #[derive(Debug, PartialEq)]
 pub enum Type {
     Int,
+    Ptr(Box<Type>),
 }
 
 #[derive(Debug, PartialEq)]

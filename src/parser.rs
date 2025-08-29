@@ -1,7 +1,19 @@
 use anyhow::anyhow;
 
-use crate::types::{ BinOp, Expr, Stmt, Type, TypeKind };
-use crate::types::TokenKind::{ TK_RETURN, TK_IF, TK_ELSE, TK_WHILE, TK_FOR };
+use crate::types::{
+    BinOp, 
+    Expr, 
+    Stmt, 
+    Type, 
+    TypeKind, 
+    TokenKind::{ 
+        TK_RETURN, 
+        TK_IF, 
+        TK_ELSE, 
+        TK_WHILE, 
+        TK_FOR 
+    }
+};
 use crate::lexer::TokenStream;
 use crate::error_at;
 
@@ -144,6 +156,11 @@ impl<'a> Parser<'a> {
     fn stmt(&mut self) -> Stmt {
         if self.tokens.consume_type(TypeKind::Int) {
             // 変数宣言
+            let mut ty = Type::Int;
+            // 型修飾子を読む
+            while self.tokens.consume("*") {
+                ty = Type::Ptr(Box::new(ty));
+            }
             let name = if let Some(ident) = self.tokens.consume_ident() {
                 ident.str
             } else {
@@ -154,9 +171,9 @@ impl<'a> Parser<'a> {
                 error_at(self.tokens.input, self.tokens.get_current_token().pos, e)
             }
             self.lvars.push(name.clone());
-            Stmt::VarDecl { name, ty: Type::Int }
+            Stmt::VarDecl { name, ty }
         } else if self.tokens.consume_keyword(TK_WHILE) {
-            // while文をパース
+            // while文
             self.tokens.expect("(").unwrap_or_else( |e|{
                 eprintln!("Error While Parsing");
                 error_at(&self.tokens.input, self.tokens.get_current_token().pos, e);
