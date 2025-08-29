@@ -411,7 +411,8 @@ return x;
 "
 
 assert 3 "
-int x; int y; int a; int b; x = 1;
+int x; int y; int *a; int *b; 
+x = 1;
 y = 2;
 a = &x;
 b = &y;
@@ -419,7 +420,9 @@ return *a + *b;
 "
 
 assert 30 "
-int a; int b; int p; a = 1; b = 2;
+int a; int b; int *p; 
+a = 1; 
+b = 2;
 p = &a;
 *p = 10;
 p = &b;
@@ -428,7 +431,11 @@ return a + b;
 "
 
 assert 3 "
-int a; int p; int pp; int ppp; a = 1;
+int a; 
+int *p; 
+int **pp; 
+int ***ppp; 
+a = 1;
 p = &a;
 pp = &p;
 ppp = &pp;
@@ -437,7 +444,11 @@ return a;
 "
 
 assert 30 "
-int a; int p; int pp; int b; a = 10;
+int a; 
+int b; 
+int *p; 
+int **pp; 
+a = 10;
 p = &a;
 pp = &p;
 *p = 20;
