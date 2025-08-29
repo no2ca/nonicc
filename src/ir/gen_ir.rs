@@ -7,7 +7,7 @@ use crate::ir::types_ir::{ BinOp as IrBinOp, ThreeAddressCode as TAC, VirtualReg
 pub struct GenIrContext {
     code: Vec<TAC>,
     register_count: usize,
-    label_count: usize,
+    pub label_count: usize,
     lvar_map: HashMap<String, VirtualReg>,
 }
 

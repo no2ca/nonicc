@@ -69,8 +69,11 @@ fn main() {
     let regs_count = regs.len();
 
     // 各関数について中間表現を生成してレジスタ割り当て
+    // TODO: ラベルのカウントが引き継がれていないため手動で引き継いでいる
+    let mut label_count = 0;
     for node in &nodes {
         let mut context = GenIrContext::new();
+        context.label_count = label_count;
         stmt_to_ir(node, &mut context);
         let code = context.get_ir_code();
         let lvar_map = context.get_lvar_map();
@@ -99,5 +102,6 @@ fn main() {
             eprintln!("[DEBUG] vreg_to_reg");
             eprintln!("{:?}", vreg_to_reg);
         }
+        label_count = context.label_count;
     }
 }
