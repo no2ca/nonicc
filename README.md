@@ -1,6 +1,164 @@
 # nonicc
 
-This repository is an implementation of a simple C compiler based on the book [低レイヤを知りたい人のためのCコンパイラ作成入門](https://www.sigbus.info/compilerbook) in Rust.
+noniccは、[低レイヤを知りたい人のためのCコンパイラ作成入門](https://www.sigbus.info/compilerbook)に基づいた、Rustで書かれたコンパイラです。
 
-This project is currently a **Work in Progress**. 
+C言語のサブセットをコンパイルし、x86-64アーキテクチャ向けのLinuxで実行可能なアセンブリコードを生成します。
 
+## 対象環境
+
+- アーキテクチャ: x86-64
+- OS: Linux (SysV ABI, ELF)
+
+## 動作確認環境
+
+- CPU: x86-64 (AMD Ryzen 5 PRO 8640HS)
+- OS: Ubuntu 24.04.3 LTS (WSL2)
+- Toolchain:
+  - rustc 1.89.0 (2025-08-04)
+  - GNU Binutils 2.42
+
+## 実装した機能
+
+以下の文法をサポートしています。
+
+- 型:
+  - `int`型変数宣言 (`int x;`)
+  - ポインタ型 (`*`, `**`, ...)、アドレス演算子 (`&`)、間接参照演算子 (`*`)
+- 制御構文:
+  - 条件分岐 (`if-else`)
+  - ループ (`for`, `while`)
+- 関数:
+  - 関数の定義と呼び出し
+  - 最大6個までの引数
+- 演算子:
+  - 四則演算 (`+`, `-`, `*`, `/`)
+  - 比較演算子 (`==`, `!=`, `<`, `<=`, `>`, `>=`)
+  - 代入 (`=`)
+  - 単項演算子 (`&`, `*`)
+- その他:
+  - ブロック (`{ ... }`)
+  - `return`文
+  
+## コンパイルの流れ
+
+noniccは、以下の流れでコンパイルを行います。
+
+1.  **字句解析 (Lexer/Tokenizer)**: 入力されたソースコードをトークン列に変換します。
+2.  **構文解析 (Parser)**: トークン列を元に、抽象構文木（AST）を構築します。
+3.  **中間表現 (IR) 生成**: ASTを、三番地コード（Three-address code）ベースの中間表現に変換します。
+4.  **レジスタ割り当て**: 仮想レジスタを持つIRに対し、線形スキャン法を用いて物理レジスタ（x86-64）を割り当てます。
+5.  **コード生成 (Code Generation)**: レジスタが割り当てられたIRを元に、最終的なx86-64アセンブリコード（Intel記法）を生成します。
+
+## 現在の制約
+
+現時点では、以下の制約があります。
+
+- **レジスタのスピル未実装**: レジスタが足りなくなった場合に、スタックへ退避させるロジック（スピル）が実装されていません。そのため、長いコードや複雑な式ではレジスタが枯渇し、コンパイルできない場合があります。
+- **引数の数**: 関数の引数は6個までに制限されています。
+- **型チェックの欠如**: int型とポインタ型の区別など、静的な型検証は行われません。
+- **未サポートの機能**:
+  - break, continue 文
+  - グローバル変数
+  - char型や配列、構造体などの複合型
+  - for文の初期化式における変数宣言 (`for (int i = 0; ...`)
+
+## ビルド方法
+
+```bash
+git clone https://github.com/no2ca/nonicc.git
+cd nonicc
+cargo build --release
+```
+
+## 使い方
+
+コンパイラへの入力として、ソースコードを文字列で渡します。
+
+```bash
+# 以下は "42" を返すプログラムをコンパイルし、実行する例
+./target/release/nonicc "int main() { int x; x=42; return x; }" > tmp.s
+gcc -o tmp tmp.s
+./tmp
+echo $?
+# 42
+```
+
+## サンプルコード
+
+#### for文と条件分岐の例
+
+このコードは `1+2+...+10 = 55` を計算し、終了コード `55` を返します。
+
+```c
+int main() {
+    int sum;
+    sum = 0;
+    int i;
+    for (i = 1; i <= 10; i = i + 1) {
+        sum = sum + i;
+    }
+    return sum;
+}
+```
+
+---
+
+#### while文の例（ユークリッドの互除法）
+
+このコードは `gcd(42, 30)` を計算し、終了コード `6` を返します。
+
+```c
+int gcd(int a, int b) {
+    while (a != b) {
+        if (a > b) {
+            a = a - b;
+        } else {
+            b = b - a;
+        }
+    }
+    return a;
+}
+
+int main() {
+    return gcd(42, 30);
+}
+```
+
+---
+
+#### ポインタの例
+
+このコードは実行すると終了コード `3` を返します。
+
+```c
+int main() {
+    int a;
+    int *p;
+    int **pp;
+    int ***ppp;
+    a = 1;
+    p = &a;
+    pp = &p;
+    ppp = &pp;
+    ***ppp = 3;
+    return a;
+}
+```
+
+---
+
+#### 再帰（アッカーマン関数）の例
+
+このコードは、`ack(3, 4)` を計算し、終了コード `125` を返します。
+
+```c
+int ack(int m, int n) {
+    if (m == 0) return n + 1;
+    if (n == 0) return ack(m - 1, 1);
+    return ack(m - 1, ack(m, n - 1));
+}
+
+int main() {
+    return ack(3, 4);
+}
+```
